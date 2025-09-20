@@ -454,7 +454,50 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       }
     }
     
-    // 6. Return result
+    // 6. Handle grouping requests
+    if ((command.toLowerCase().includes('group') && command.toLowerCase().includes('by category')) ||
+        (command.toLowerCase().includes('grouped by category'))) {
+      
+      if (mcpResult.result && Array.isArray(mcpResult.result)) {
+        console.log(`[Grouping] Detected grouping by category request`);
+        
+        const products = mcpResult.result;
+        const groupedByCategory: Record<string, any[]> = {};
+        
+        // Group products by category (normalize case)
+        for (const product of products) {
+          if (product.category) {
+            const normalizedCategory = product.category.charAt(0).toUpperCase() + 
+                                     product.category.slice(1).toLowerCase();
+            if (!groupedByCategory[normalizedCategory]) {
+              groupedByCategory[normalizedCategory] = [];
+            }
+            groupedByCategory[normalizedCategory].push(product);
+          }
+        }
+        
+        // Convert to structured format
+        const categoryGroups = Object.entries(groupedByCategory).map(([category, items]) => ({
+          category,
+          count: items.length,
+          products: items
+        }));
+        
+        mcpResult = {
+          jsonrpc: "2.0",
+          id: mcpResult.id,
+          result: {
+            type: 'grouped_products',
+            message: `Found ${products.length} products grouped into ${categoryGroups.length} categories`,
+            totalProducts: products.length,
+            totalCategories: categoryGroups.length,
+            categories: categoryGroups
+          }
+        };
+      }
+    }
+    
+    // 7. Return result
     res.json({ result: mcpResult });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Internal error' });

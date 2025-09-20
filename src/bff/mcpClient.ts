@@ -1,7 +1,6 @@
 // Debug utility: Print all products from MCP
 export async function debugPrintAllProducts(): Promise<void> {
-  const token = getGCPAuthToken();
-  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+  const config = getAuthConfig();
   const rpcPayload = {
     jsonrpc: "2.0",
     id: Date.now(),
@@ -46,23 +45,33 @@ const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'https://ravi-mcp-server-25
 
 import { execSync } from 'child_process';
 
-function getGCPAuthToken(): string | undefined {
-  try {
-    // Fetch GCP identity token using gcloud CLI
-    const token = execSync('gcloud auth print-identity-token', { encoding: 'utf-8' }).trim();
-    return token;
-  } catch (err) {
-    console.error('Failed to fetch GCP identity token:', err);
-    return undefined;
+// Authentication for different deployment environments
+function getAuthConfig(): { headers?: { [key: string]: string } } | undefined {
+  // For local development with gcloud CLI
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const token = execSync('gcloud auth print-identity-token', { encoding: 'utf-8' }).trim();
+      return { headers: { Authorization: `Bearer ${token}` } };
+    } catch (err) {
+      console.warn('Local gcloud auth failed, trying without authentication:', err);
+    }
   }
+  
+  // For production deployments
+  // Check if MCP server requires authentication
+  const authToken = process.env.MCP_AUTH_TOKEN;
+  if (authToken) {
+    return { headers: { Authorization: `Bearer ${authToken}` } };
+  }
+  
+  // Try without authentication (if MCP server allows it)
+  console.log('Using no authentication for MCP server');
+  return undefined;
 }
 
 export async function callMCP(toolInvocation: any): Promise<any> {
   try {
-    const token = getGCPAuthToken();
-    const config = token
-      ? { headers: { Authorization: `Bearer ${token}` } }
-      : undefined;
+    const config = getAuthConfig();
     // Debug: Print product list for update operations (limit to first 20)
     if (["update_product", "update_products"].includes(toolInvocation.tool)) {
       const rpcPayloadList = {

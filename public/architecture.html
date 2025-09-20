@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture - Product Management AI Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            padding: 32px;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header .subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .nav-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 16px 32px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        
+        .nav-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .architecture-diagram {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 32px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .diagram-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .component {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+        
+        .component:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(79, 70, 229, 0.15);
+            border-color: #4f46e5;
+        }
+        
+        .component.frontend {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-color: #3b82f6;
+        }
+        
+        .component.backend {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-color: #10b981;
+        }
+        
+        .component.external {
+            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+            border-color: #f59e0b;
+        }
+        
+        .component-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+        
+        .frontend .component-icon { color: #2563eb; }
+        .backend .component-icon { color: #059669; }
+        .external .component-icon { color: #d97706; }
+        
+        .component h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1f2937;
+        }
+        
+        .component p {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        
+        .component-features {
+            list-style: none;
+            text-align: left;
+        }
+        
+        .component-features li {
+            font-size: 13px;
+            color: #4b5563;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .component-features li::before {
+            content: '•';
+            color: #10b981;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        /* Connection lines */
+        .connection {
+            position: absolute;
+            z-index: 1;
+        }
+        
+        .connection-horizontal {
+            height: 2px;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            top: 50%;
+            border-radius: 2px;
+        }
+        
+        .connection-1 {
+            left: 32%;
+            width: 16%;
+            transform: translateY(-1px);
+        }
+        
+        .connection-2 {
+            right: 32%;
+            width: 16%;
+            transform: translateY(-1px);
+        }
+        
+        .flow-section {
+            margin: 48px 0;
+        }
+        
+        .flow-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .flow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+        
+        .flow-step {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            text-align: left;
+        }
+        
+        .flow-step::before {
+            content: attr(data-step);
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .flow-step h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 12px 0 8px 0;
+        }
+        
+        .flow-step p {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+        
+        .tech-stack {
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 32px;
+            margin: 32px 0;
+        }
+        
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+        
+        .tech-category {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .tech-category h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tech-list {
+            list-style: none;
+        }
+        
+        .tech-list li {
+            font-size: 13px;
+            color: #6b7280;
+            margin: 6px 0;
+            padding-left: 16px;
+            position: relative;
+        }
+        
+        .tech-list li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-size: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .diagram-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            
+            .connection {
+                display: none;
+            }
+            
+            .flow-steps {
+                grid-template-columns: 1fr;
+            }
+            
+            .tech-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .content {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-sitemap"></i> System Architecture</h1>
+            <div class="subtitle">AI-Powered Product Management System</div>
+        </div>
+        
+        <div class="nav-section">
+            <a href="/" class="nav-btn">
+                <i class="fas fa-arrow-left"></i>
+                Back to Chatbot
+            </a>
+        </div>
+        
+        <div class="content">
+            <div class="architecture-diagram">
+                <div class="connection connection-horizontal connection-1"></div>
+                <div class="connection connection-horizontal connection-2"></div>
+                
+                <div class="diagram-grid">
+                    <!-- Frontend -->
+                    <div class="component frontend">
+                        <i class="fas fa-desktop component-icon"></i>
+                        <h3>Frontend UI</h3>
+                        <p>Modern chatbot interface with natural language processing</p>
+                        <ul class="component-features">
+                            <li>Modern gradient design</li>
+                            <li>Real-time chat interface</li>
+                            <li>Command history</li>
+                            <li>Response formatting</li>
+                            <li>Mobile responsive</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Backend BFF -->
+                    <div class="component backend">
+                        <i class="fas fa-server component-icon"></i>
+                        <h3>Express BFF</h3>
+                        <p>Backend-for-Frontend with intelligent routing and processing</p>
+                        <ul class="component-features">
+                            <li>LLM Client integration</li>
+                            <li>Smart route handling</li>
+                            <li>MCP Client orchestration</li>
+                            <li>Schema caching</li>
+                            <li>Authentication management</li>
+                            <li>Grouping & filtering logic</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- External Services -->
+                    <div class="component external">
+                        <i class="fas fa-cloud component-icon"></i>
+                        <h3>External Services</h3>
+                        <p>Cloud-hosted AI and data services</p>
+                        <ul class="component-features">
+                            <li>Ollama LLM (Local AI)</li>
+                            <li>MCP Server (Google Cloud)</li>
+                            <li>Product database</li>
+                            <li>Authentication services</li>
+                            <li>API endpoints</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-section">
+                <h2 class="flow-title">Request Flow Architecture</h2>
+                <div class="flow-steps">
+                    <div class="flow-step" data-step="1">
+                        <h4><i class="fas fa-comment"></i> User Input</h4>
+                        <p>User types natural language command in the chat interface. Example: "Show all products grouped by category"</p>
+                    </div>
+                    
+                    <div class="flow-step" data-step="2">
+                        <h4><i class="fas fa-route"></i> Route Handler</h4>
+                        <p>Express.js processes the request, validates input, and orchestrates the flow between components</p>
+                    </div>
+                    
+                    <div class="flow-step" data-step="3">
+                        <h4><i class="fas fa-brain"></i> LLM Client</h4>
+                        <p>Ollama LLM interprets user intent and converts natural language to structured tool invocations</p>
+                    </div>
+                    
+                    <div class="flow-step" data-step="4">
+                        <h4><i class="fas fa-database"></i> Schema Cache</h4>
+                        <p>Cached MCP tool schemas provide available operations and parameters for efficient processing</p>
+                    </div>
+                    
+                    <div class="flow-step" data-step="5">
+                        <h4><i class="fas fa-plug"></i> MCP Client</h4>
+                        <p>Handles authentication and communicates with remote MCP server using JSON-RPC protocol</p>
+                    </div>
+                    
+                    <div class="flow-step" data-step="6">
+                        <h4><i class="fas fa-cloud-upload"></i> Remote MCP Server</h4>
+                        <p>Google Cloud Run service processes requests, manages product database, and returns results</p>
+                    </div>
+                    
+                    <div class="flow-step" data-step="7">
+                        <h4><i class="fas fa-cogs"></i> Response Processing</h4>
+                        <p>Route handler applies business logic like grouping, filtering, counting, and duplicate detection</p>
+                    </div>
+                    
+                    <div class="flow-step" data-step="8">
+                        <h4><i class="fas fa-paint-brush"></i> UI Formatting</h4>
+                        <p>Frontend formats and displays results with beautiful cards, grouping, and interactive elements</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tech-stack">
+                <h2 class="flow-title">Technology Stack</h2>
+                <div class="tech-grid">
+                    <div class="tech-category">
+                        <h4><i class="fas fa-code" style="color: #3b82f6;"></i> Frontend</h4>
+                        <ul class="tech-list">
+                            <li>HTML5 & CSS3</li>
+                            <li>Modern JavaScript ES6+</li>
+                            <li>CSS Grid & Flexbox</li>
+                            <li>Font Awesome Icons</li>
+                            <li>Google Fonts (Inter)</li>
+                            <li>Responsive Design</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="tech-category">
+                        <h4><i class="fas fa-server" style="color: #10b981;"></i> Backend</h4>
+                        <ul class="tech-list">
+                            <li>Node.js 18+</li>
+                            <li>Express.js</li>
+                            <li>TypeScript</li>
+                            <li>Axios HTTP Client</li>
+                            <li>ES Modules</li>
+                            <li>JSON-RPC Protocol</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="tech-category">
+                        <h4><i class="fas fa-brain" style="color: #7c3aed;"></i> AI & ML</h4>
+                        <ul class="tech-list">
+                            <li>Ollama LLM</li>
+                            <li>Natural Language Processing</li>
+                            <li>Intent Recognition</li>
+                            <li>Model Context Protocol</li>
+                            <li>Smart Tool Selection</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="tech-category">
+                        <h4><i class="fas fa-cloud" style="color: #f59e0b;"></i> Deployment</h4>
+                        <ul class="tech-list">
+                            <li>Google Cloud Run</li>
+                            <li>GCP Authentication</li>
+                            <li>Docker Containers</li>
+                            <li>REST APIs</li>
+                            <li>HTTPS/TLS</li>
+                            <li>Environment Variables</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="tech-category">
+                        <h4><i class="fas fa-tools" style="color: #ef4444;"></i> DevOps</h4>
+                        <ul class="tech-list">
+                            <li>TypeScript Compiler</li>
+                            <li>NPM Package Manager</li>
+                            <li>Git Version Control</li>
+                            <li>Environment Variables</li>
+                            <li>Process Management</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="tech-category">
+                        <h4><i class="fas fa-shield-alt" style="color: #8b5cf6;"></i> Security</h4>
+                        <ul class="tech-list">
+                            <li>Bearer Token Auth</li>
+                            <li>GCP Identity Tokens</li>
+                            <li>CORS Configuration</li>
+                            <li>Input Validation</li>
+                            <li>Error Handling</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #3b82f6; border-radius: 16px; padding: 24px; margin: 32px 0; text-align: center;">
+                <h3 style="color: #1e40af; margin-bottom: 12px;">
+                    <i class="fas fa-lightbulb"></i> Key Features
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px;">
+                    <div style="color: #1e40af; font-size: 14px;">
+                        <i class="fas fa-comments"></i> Natural Language Interface
+                    </div>
+                    <div style="color: #1e40af; font-size: 14px;">
+                        <i class="fas fa-layer-group"></i> Smart Product Grouping
+                    </div>
+                    <div style="color: #1e40af; font-size: 14px;">
+                        <i class="fas fa-sync-alt"></i> Real-time Updates
+                    </div>
+                    <div style="color: #1e40af; font-size: 14px;">
+                        <i class="fas fa-copy"></i> Duplicate Detection
+                    </div>
+                    <div style="color: #1e40af; font-size: 14px;">
+                        <i class="fas fa-edit"></i> Bulk Operations
+                    </div>
+                    <div style="color: #1e40af; font-size: 14px;">
+                        <i class="fas fa-mobile-alt"></i> Mobile Responsive
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

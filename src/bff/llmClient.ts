@@ -16,6 +16,7 @@ IMPORTANT RULES:
 - For "show products by segment" or "products in [segment] segment" → use get_products_by_segment  
 - For "find product named [name]" or "get product [name]" → use get_product_by_name
 - For "show all products" or "list products" → use list_products
+- For "show all products grouped by category" → use list_products (not get_products_by_category!)
 - For "update price of [product]" or "change [product] price" → use update_product with id as product name and new price
 - For "how many" or "count" queries → use list_products to get all products for counting
 - For creating, updating, deleting → use appropriate tools

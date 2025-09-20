@@ -114,34 +114,21 @@ Access at: `http://localhost:3001`
 
 **To deploy your own instance:**
 
-1. **Deploy to Vercel** (Recommended)
-   ```bash
-   # Install Vercel CLI
-   npm i -g vercel
-   
-   # Deploy
-   vercel --prod
-   ```
+Set these environment variables in your hosting platform:
+```
+MCP_SERVER_URL=https://ravi-mcp-server-256110662801.europe-west3.run.app/mcp
+PORT=3001
+```
 
-2. **Deploy to Railway**
-   ```bash
-   # Connect to Railway
-   railway login
-   railway init
-   railway up
-   ```
+**Optional Authentication** (if your MCP server requires it):
+```
+MCP_AUTH_TOKEN=your-auth-token-here
+```
 
-3. **Deploy to Netlify**
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-   - Start command: `npm start`
-
-4. **Environment Configuration**
-   Set these environment variables in your hosting platform:
-   ```
-   MCP_SERVER_URL=https://ravi-mcp-server-256110662801.europe-west3.run.app/mcp
-   PORT=3001
-   ```
+**Authentication Notes:**
+- **Local Development**: Uses `gcloud` CLI authentication automatically
+- **Production**: Set `MCP_AUTH_TOKEN` environment variable if needed
+- **Public Access**: If your MCP server allows unauthenticated access, no token needed
 
 **Note**: The MCP server is already deployed and running on Google Cloud Run. You only need to deploy the frontend/BFF layer.
 
