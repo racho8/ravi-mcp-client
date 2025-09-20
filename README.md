@@ -80,61 +80,52 @@ curl -X POST http://localhost:3001/api/command \
 ### 7. (Optional) Add a frontend or chatbot UI
 
 
-# Ravi MCP Client 🚀
+# Ravi MCP Client
 
-Modern AI-powered product management system with natural language interface, built with TypeScript, Express, and the Model Context Protocol (MCP). Features intelligent product search, bulk operations, duplicate management, and a sleek modern UI with gradients and animations.
+# Ravi MCP Client
 
-## ✨ Features
+Modern AI-powered product management system with natural language interface. Built with TypeScript, Express, and the Model Context Protocol (MCP).
 
-### 🤖 AI-Powered Natural Language Interface
-- **Intelligent Command Processing**: "Update the price of all iPhones to 999"
-- **Smart Product Search**: "Find all MacBook products", "Show me laptops"
-- **Counting Queries**: "How many products are there?", "Count iPhone models"
-- **Bulk Operations**: "Update all MacBook Pro 16-inch products to price 2900"
+## About
 
-### 🎨 Modern UI & UX
-- **Sleek Design**: Modern gradients, animations, and responsive layout
-- **Recent Commands**: Last 5 commands saved and clickable for quick access
-- **Enhanced Formatting**: Beautiful product cards with clear information hierarchy
-- **Mobile Responsive**: Works seamlessly across all device sizes
+This project demonstrates a complete AI-powered product management system that allows users to interact with a product database using natural language commands. Users can search, create, update, and manage products through conversational queries like "Find all MacBook products" or "Update the price of all iPhones to 999".
 
-### 📦 Comprehensive Product Management
-- **CRUD Operations**: Create, read, update, delete products with intelligent handling
-- **Smart Filtering**: Name-based filtering with substring matching
-- **Duplicate Detection**: Advanced algorithms to find and recommend cleanup of duplicates
-- **Bulk Updates**: Update multiple products at once with pattern matching
+## Key Features
 
-### 🔧 Technical Excellence
-- **TypeScript**: Full type safety throughout the application
-- **MCP Protocol**: Modern Model Context Protocol for AI-tool communication
-- **Express BFF**: Backend-for-Frontend pattern with intelligent routing
-- **Google Cloud Integration**: Hosted MCP server on Google Cloud Run
-- **Advanced Error Handling**: Comprehensive logging and user-friendly error messages
+- **Natural Language Processing**: Convert user commands to database operations
+- **Smart Product Search**: Find products by name, category, or segment with intelligent filtering
+- **Bulk Operations**: Update multiple products at once with pattern matching
+- **Modern UI**: Responsive interface with gradients, animations, and command history
+- **Duplicate Management**: Detect and clean up duplicate products automatically
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Modern UI     │    │   Express BFF    │    │  MCP Server     │
+│   Frontend UI   │    │   Express BFF    │    │  MCP Server     │
 │                 │    │                  │    │                 │
-│ • Gradients     │◄──►│ • LLM Client     │◄──►│ • Product CRUD  │
-│ • Animations    │    │ • Route Handler  │    │ • Bulk Ops      │
-│ • Recent Cmds   │    │ • Smart Parsing  │    │ • Google Cloud  │
+│ • Modern UI     │◄──►│ • LLM Client     │◄──►│ • Product CRUD  │
+│ • Chat Interface│    │ • Route Handler  │    │ • Google Cloud  │
+│ • Command History│   │ • Smart Parsing  │    │ • JSON-RPC      │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## 🚀 Quick Start
+**Components:**
+- **Frontend**: Modern web interface with natural language chat
+- **BFF (Backend-for-Frontend)**: Express.js server with LLM integration
+- **MCP Server**: Remote product management service on Google Cloud Run
+
+## Local Setup
 
 ### Prerequisites
-- Node.js 18+ and npm
-- Access to Ollama (for local LLM) or configure cloud LLM
-- MCP server endpoint (Google Cloud Run)
+- Node.js 18+
+- Access to Ollama (local LLM) or configure cloud LLM
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ravi-mcp-client.git
+   git clone https://github.com/racho8/ravi-mcp-client.git
    cd ravi-mcp-client
    ```
 
@@ -153,57 +144,35 @@ Modern AI-powered product management system with natural language interface, bui
    npm start
    ```
 
-5. **Open your browser**
-   Navigate to `http://localhost:3001` to access the modern UI
+5. **Open the application**
+   Navigate to `http://localhost:3001`
 
-### Environment Configuration
-
-Create a `.env` file (optional):
+### Environment Variables (Optional)
 ```bash
-MCP_SERVER_URL=https://your-mcp-server.run.app/mcp
-PORT=3001
+export MCP_SERVER_URL='https://your-mcp-server.run.app/mcp'
+export PORT=3001
 ```
 
-## 🎯 Usage Examples
-
-### Natural Language Commands
+## Usage Examples
 
 **Product Search:**
-```
-"Show all products"
-"Find all MacBook products"
-"Show me products in Electronics category"
-"Get iPhone models"
-```
+- "Show all products"
+- "Find all MacBook products"
+- "Show me products in Electronics category"
 
-**Counting Queries:**
-```
-"How many products are there?"
-"Count MacBook products"
-"How many items in Electronics?"
-```
+**Product Updates:**
+- "Update the price of iPhone 15 to 899"
+- "Update all iPhones to price 999"
 
-**Updates:**
-```
-"Update the price of iPhone 15 to 899"
-"Update all iPhones to price 999"
-"Change MacBook Pro 16-inch price to 2500"
-```
-
-**Bulk Operations:**
-```
-"Update all MacBook Pro 16-inch products to price 2900"
-"Set all laptop prices to 1500"
-```
+**Counting & Analytics:**
+- "How many products are there?"
+- "Count MacBook products"
 
 **Duplicate Management:**
-```
-"Find duplicates"
-"Clean up duplicate products"
-"Show duplicate analysis"
-```
+- "Find duplicates"
+- "Clean up duplicate products"
 
-## 🔌 API Endpoints
+## API
 
 ### POST `/api/command`
 Process natural language commands
@@ -223,122 +192,45 @@ Process natural language commands
       "id": "uuid-123",
       "name": "MacBook Pro 16-inch",
       "price": 2499,
-      "category": "Electronics",
-      "segment": "Laptops"
+      "category": "Electronics"
     }
   ]
 }
 ```
 
-## 🛠️ Development
-
-### Project Structure
-```
-src/
-├── bff/
-│   ├── index.ts          # Express server setup
-│   ├── routes.ts         # Main request routing logic
-│   ├── llmClient.ts      # LLM integration (Ollama)
-│   ├── mcpClient.ts      # MCP protocol client
-│   └── mcpSchemaCache.ts # Tool schema caching
-├── types/
-│   └── index.ts          # TypeScript type definitions
-└── utils/                # Utility functions
-
-public/
-└── index.html           # Modern UI with gradients & animations
-```
-
-### Key Components
-
-**routes.ts**: Intelligent command processing with:
-- LLM intent parsing
-- MCP tool execution
-- Smart filtering for product searches
-- Bulk operation handling
-- Duplicate detection and cleanup
-
-**llmClient.ts**: Advanced prompt engineering for:
-- Tool selection guidance
-- Parameter extraction
-- Context-aware responses
-
-**mcpClient.ts**: Clean MCP protocol integration with:
-- Google Cloud authentication
-- Error handling and retries
-- Tool schema validation
-
-### Scripts
-```bash
-npm run build     # Compile TypeScript
-npm start         # Start production server
-npm run dev       # Development mode (if configured)
-```
-
-## 🎨 UI Features
-
-### Modern Design Elements
-- **Gradient Backgrounds**: Eye-catching purple-to-blue gradients
-- **Smooth Animations**: Hover effects and transitions
-- **Recent Commands**: Quick access to last 5 commands
-- **Responsive Layout**: Mobile-first design approach
-- **Enhanced Typography**: Clear hierarchy and readability
-
-### User Experience
-- **Instant Feedback**: Real-time command processing
-- **Error Handling**: User-friendly error messages
-- **Loading States**: Clear indication of processing
-- **Command History**: Easy command repetition
-
-## 🔍 Advanced Features
-
-### Smart Product Matching
-- **Substring Search**: "iPhone" matches "iPhone 14", "iPhone 15 Pro"
-- **Case Insensitive**: Works with any capitalization
-- **Fuzzy Logic**: Intelligent name resolution
-
-### Duplicate Management
-- **Detection Algorithm**: Finds products with identical names
-- **Smart Recommendations**: Suggests which duplicates to keep/delete
-- **Bulk Cleanup**: One-click duplicate removal
-
-### Counting Queries
-- **Natural Language**: "How many", "Count", "Number of"
-- **Contextual Filtering**: Applies same filters as regular searches
-- **Enhanced Responses**: Clear count with context
-
-## 🚀 Deployment
+## Deployment
 
 ### Local Development
 ```bash
 npm run build
-node dist/bff/index.js
+npm start
 ```
 
-### Production Deployment
-The application can be deployed to any Node.js hosting platform:
-- Heroku, Railway, Render
+### Production
+Deploy to any Node.js hosting platform:
+- Vercel, Netlify, Railway
 - AWS, Google Cloud, Azure
 - Docker containers
 
-## 🤝 Contributing
+## Tech Stack
+
+- **Frontend**: HTML, CSS, JavaScript (Modern UI)
+- **Backend**: Node.js, Express.js, TypeScript
+- **AI Integration**: Ollama LLM / Cloud LLM
+- **Protocol**: Model Context Protocol (MCP)
+- **Hosting**: Google Cloud Run (MCP Server)
+
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes with comprehensive tests
-4. Submit a pull request with detailed description
+3. Make your changes
+4. Submit a pull request
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- **Model Context Protocol (MCP)**: For enabling seamless AI-tool communication
-- **Ollama**: For local LLM capabilities
-- **Google Cloud**: For reliable MCP server hosting
-- **TypeScript**: For excellent developer experience and type safety
+MIT License - see LICENSE file for details.
 
 ---
 
-**Built with ❤️ using modern web technologies and AI-first design principles.**
+Built with modern web technologies and AI-first design principles.
