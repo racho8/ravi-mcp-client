@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management AI Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .chat-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            padding: 24px 32px;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+        
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .chat-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .chat-header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .examples-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px 32px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .examples-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .example-commands {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .example-cmd {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 13px;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .example-cmd:hover {
+            background: #4f46e5;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .recent-commands {
+            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+            padding: 16px 32px;
+            border-bottom: 1px solid #f59e0b;
+        }
+        
+        .recent-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .recent-cmd {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #f59e0b;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 13px;
+            color: #92400e;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-right: 8px;
+            margin-bottom: 4px;
+            display: inline-block;
+        }
+        
+        .recent-cmd:hover {
+            background: #f59e0b;
+            color: white;
+            transform: scale(1.02);
+        }
+        
+        .chat-messages {
+            height: 450px;
+            overflow-y: auto;
+            padding: 24px 32px;
+            background: #fafbfc;
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        
+        .message {
+            margin: 16px 0;
+            animation: fadeInUp 0.3s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .user-message {
+            text-align: right;
+        }
+        
+        .user-message .message-content {
+            display: inline-block;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 80%;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .bot-message .message-content {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px 18px 18px 4px;
+            padding: 16px 20px;
+            max-width: 90%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .input-section {
+            background: white;
+            padding: 24px 32px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 24px;
+            padding: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .input-container:focus-within {
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        #commandInput {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            outline: none;
+            font-family: inherit;
+        }
+        
+        #commandInput::placeholder {
+            color: #94a3b8;
+        }
+        
+        #sendButton {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        #sendButton:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        }
+        
+        #sendButton:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Modern card styles for responses */
+        .success-message {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 1px solid #34d399;
+            color: #065f46;
+            margin: 12px 0;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #f87171;
+            color: #7f1d1d;
+            margin: 12px 0;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(248, 113, 113, 0.2);
+        }
+        
+        .product-list {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #0ea5e9;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 12px 0;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+        }
+        
+        .product-list h4 {
+            color: #0c4a6e;
+            margin-bottom: 16px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .product-item {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0f2fe;
+        }
+        
+        .product-name {
+            font-weight: 600;
+            color: #0c4a6e;
+        }
+        
+        .product-price {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .update-summary, .duplicate-analysis, .cleanup-summary {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+            padding: 20px;
+            border-radius: 16px;
+            margin: 12px 0;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        
+        .loading {
+            opacity: 0.7;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .chat-container {
+                border-radius: 16px;
+            }
+            
+            .chat-header, .examples-section, .input-section {
+                padding: 20px;
+            }
+            
+            .chat-messages {
+                padding: 20px;
+                height: 400px;
+            }
+            
+            .example-commands {
+                flex-direction: column;
+            }
+            
+            .example-cmd {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1><i class="fas fa-robot"></i> AI Product Assistant</h1>
+            <div class="subtitle">Intelligent inventory management at your fingertips</div>
+        </div>
+        
+        <div class="examples-section">
+            <div class="examples-title">Try these commands</div>
+            <div class="example-commands">
+                <span class="example-cmd" onclick="setInput('Update the price of iPhone 15 to 899')">Update iPhone 15 price to $899</span>
+                <span class="example-cmd" onclick="setInput('Find all MacBook products')">Find MacBook products</span>
+                <span class="example-cmd" onclick="setInput('How many products are in Electronics category')">Count Electronics products</span>
+                <span class="example-cmd" onclick="setInput('Update all iPad Pro prices to 1199')">Bulk update iPad Pro prices</span>
+                <span class="example-cmd" onclick="setInput('Find duplicate products')">Find duplicates</span>
+            </div>
+        </div>
+        
+        <div class="recent-commands" id="recentCommands" style="display: none;">
+            <div class="recent-title">
+                <i class="fas fa-history"></i> Recent commands
+            </div>
+            <div id="recentCommandsContainer"></div>
+        </div>
+        
+        <div class="chat-messages" id="messages"></div>
+        
+        <div class="input-section">
+            <div class="input-container">
+                <input type="text" id="commandInput" placeholder="Ask me anything about your products..." />
+                <button id="sendButton">
+                    <i class="fas fa-paper-plane"></i>
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recentCommands = [];
+        const MAX_RECENT_COMMANDS = 2;
+        
+        function addMessage(content, isUser = false) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = content;
+            
+            messageDiv.appendChild(contentDiv);
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        function addRecentCommand(command) {
+            // Don't add duplicate commands or empty commands
+            if (!command || command.trim() === '' || recentCommands.includes(command.trim())) {
+                return;
+            }
+            
+            // Add to beginning of array
+            recentCommands.unshift(command.trim());
+            
+            // Keep only the last MAX_RECENT_COMMANDS
+            if (recentCommands.length > MAX_RECENT_COMMANDS) {
+                recentCommands = recentCommands.slice(0, MAX_RECENT_COMMANDS);
+            }
+            
+            updateRecentCommandsDisplay();
+        }
+        
+        function updateRecentCommandsDisplay() {
+            const recentSection = document.getElementById('recentCommands');
+            const container = document.getElementById('recentCommandsContainer');
+            
+            if (recentCommands.length === 0) {
+                recentSection.style.display = 'none';
+                return;
+            }
+            
+            recentSection.style.display = 'block';
+            container.innerHTML = '';
+            
+            recentCommands.forEach(cmd => {
+                const cmdElement = document.createElement('span');
+                cmdElement.className = 'recent-cmd';
+                cmdElement.textContent = cmd.length > 50 ? cmd.substring(0, 50) + '...' : cmd;
+                cmdElement.title = cmd;
+                cmdElement.onclick = () => setInput(cmd);
+                container.appendChild(cmdElement);
+            });
+        }
+        
+        function setInput(text) {
+            document.getElementById('commandInput').value = text;
+            document.getElementById('commandInput').focus();
+        }
+        
+        function setLoading(isLoading) {
+            const button = document.getElementById('sendButton');
+            const input = document.getElementById('commandInput');
+            
+            if (isLoading) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                input.disabled = true;
+            } else {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                input.disabled = false;
+                input.focus();
+            }
+        }
+        
+        function formatResponse(data) {
+            if (data.error) {
+                return `<div class="error-message">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Error:</strong> ${data.error}
+                </div>`;
+            }
+            
+            let html = '';
+            
+            // Handle the result structure from backend
+            const result = data.result ? data.result.result : null;
+            
+            if (result && result.success) {
+                html += `<div class="success-message">
+                    <strong><i class="fas fa-check-circle"></i> Success:</strong> ${result.message}
+                </div>`;
+                
+                if (result.updatedProduct) {
+                    html += `<div class="product-list">
+                        <h4><i class="fas fa-edit"></i> Updated Product</h4>
+                        <div class="product-item">
+                            <span class="product-name">${result.updatedProduct.name}</span>
+                            <span class="product-price">$${result.updatedProduct.price}</span>
+                        </div>
+                    </div>`;
+                }
+            }
+            
+            if (result && result.count !== undefined) {
+                html += `<div class="success-message">
+                    <strong><i class="fas fa-calculator"></i> Count Result:</strong> 
+                    Found ${result.count} ${result.context || 'products'}
+                </div>`;
+            }
+            
+            if (result && Array.isArray(result)) {
+                html += `<div class="product-list">
+                    <h4><i class="fas fa-list"></i> Products Found (${result.length})</h4>`;
+                
+                result.forEach(product => {
+                    html += `<div class="product-item">
+                        <span class="product-name">${product.name}</span>
+                        <span class="product-price">$${product.price}</span>
+                    </div>`;
+                });
+                
+                html += `</div>`;
+            }
+            
+            if (result && result.type === 'duplicate_analysis') {
+                html += `<div class="duplicate-analysis">
+                    <strong><i class="fas fa-copy"></i> Duplicate Analysis</strong><br/>
+                    ${result.message}<br/><br/>`;
+                
+                if (result.recommendations) {
+                    result.recommendations.forEach((rec, index) => {
+                        html += `<div class="duplicate-group">
+                            <strong>Group ${index + 1}: "${rec.productName}"</strong><br/>
+                            <div class="duplicate-item keep-item">
+                                <i class="fas fa-check"></i> KEEP: ${rec.recommended.keep.name} - $${rec.recommended.keep.price}
+                            </div>`;
+                        
+                        rec.recommended.delete.forEach(product => {
+                            html += `<div class="duplicate-item delete-item">
+                                <i class="fas fa-times"></i> DELETE: ${product.name} - $${product.price}
+                            </div>`;
+                        });
+                        
+                        html += `</div>`;
+                    });
+                }
+                
+                html += `</div>`;
+            }
+            
+            if (result && result.type === 'cleanup_result') {
+                html += `<div class="cleanup-summary">
+                    <strong><i class="fas fa-broom"></i> Cleanup Complete</strong><br/>
+                    ${result.message}<br/>
+                </div>`;
+                
+                if (result.keptProducts && result.keptProducts.length > 0) {
+                    html += `<div class="product-list">
+                        <h4><i class="fas fa-check-circle"></i> Products Kept (${result.keptProducts.length})</h4>`;
+                    
+                    result.keptProducts.forEach(product => {
+                        html += `<div class="product-item">
+                            <span class="product-name">${product.name}</span>
+                            <span class="product-price">$${product.price}</span>
+                        </div>`;
+                    });
+                    
+                    html += `</div>`;
+                }
+            }
+            
+            // If no specific formatting was applied, show a generic message
+            if (!html) {
+                if (result) {
+                    html = `<div class="success-message">
+                        <i class="fas fa-info-circle"></i> Operation completed successfully
+                    </div>`;
+                } else {
+                    html = '<div class="error-message">No response received</div>';
+                }
+            }
+            
+            return html;
+        }
+        
+        async function sendCommand() {
+            const input = document.getElementById('commandInput');
+            const command = input.value.trim();
+            
+            if (!command) return;
+            
+            // Add user message
+            addMessage(command, true);
+            
+            // Add to recent commands
+            addRecentCommand(command);
+            
+            // Clear input and set loading
+            input.value = '';
+            setLoading(true);
+            
+            try {
+                const response = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command: command }),
+                });
+                
+                const data = await response.json();
+                addMessage(formatResponse(data));
+                
+            } catch (error) {
+                addMessage(formatResponse({ error: `Connection error: ${error.message}` }));
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('sendButton').addEventListener('click', sendCommand);
+        
+        document.getElementById('commandInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendCommand();
+            }
+        });
+        
+        // Welcome message
+        addMessage(`
+            <div style="text-align: center; padding: 20px;">
+                <h3 style="color: #4f46e5; margin-bottom: 16px;">
+                    <i class="fas fa-sparkles"></i> Welcome to your AI Product Assistant!
+                </h3>
+                <p style="color: #64748b; line-height: 1.6;">
+                    I can help you manage your inventory with natural language commands. 
+                    Try asking me to find products, update prices, analyze duplicates, or count items by category.
+                </p>
+                <div style="margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 1px solid #0ea5e9;">
+                    <strong style="color: #0c4a6e;">💡 Pro tip:</strong> 
+                    <span style="color: #0369a1;">Click any example command above to get started quickly!</span>
+                </div>
+            </div>
+        `);
+        
+        // Focus input on load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('commandInput').focus();
+        });
+    </script>
+</body>
+</html>
