@@ -2,6 +2,16 @@
 
 Modern AI-powered product management system with natural language interface. Built with TypeScript, Express, and the Model Context Protocol (MCP).
 
+## 🚀 Quick Start
+
+**To access the chatbot:**
+1. Clone this repository
+2. Run `npm install && npm run build && npm start`
+3. Open `http://localhost:3001` in your browser
+4. Start chatting: "Show all products" or "Find MacBook products"
+
+**Live Demo**: Currently runs locally - see [Deployment](#deployment) section for hosting options.
+
 ## About
 
 This project demonstrates a complete AI-powered product management system that allows users to interact with a product database using natural language commands. Users can search, create, update, and manage products through conversational queries like "Find all MacBook products" or "Update the price of all iPhones to 999".
@@ -96,12 +106,44 @@ export PORT=3001
 npm run build
 npm start
 ```
+Access at: `http://localhost:3001`
 
-### Production
-Deploy to any Node.js hosting platform:
-- Vercel, Netlify, Railway
-- AWS, Google Cloud, Azure
-- Docker containers
+### Production Deployment
+
+**Current Status**: This project is designed for local development with remote MCP server integration.
+
+**To deploy your own instance:**
+
+1. **Deploy to Vercel** (Recommended)
+   ```bash
+   # Install Vercel CLI
+   npm i -g vercel
+   
+   # Deploy
+   vercel --prod
+   ```
+
+2. **Deploy to Railway**
+   ```bash
+   # Connect to Railway
+   railway login
+   railway init
+   railway up
+   ```
+
+3. **Deploy to Netlify**
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+   - Start command: `npm start`
+
+4. **Environment Configuration**
+   Set these environment variables in your hosting platform:
+   ```
+   MCP_SERVER_URL=https://ravi-mcp-server-256110662801.europe-west3.run.app/mcp
+   PORT=3001
+   ```
+
+**Note**: The MCP server is already deployed and running on Google Cloud Run. You only need to deploy the frontend/BFF layer.
 
 ## Tech Stack
 
