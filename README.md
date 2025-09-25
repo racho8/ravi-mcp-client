@@ -26,17 +26,90 @@ This project demonstrates a complete AI-powered product management system that a
 
 ## Architecture
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend UI   │    │   Express BFF    │    │  MCP Server     │
-│                 │    │                  │    │                 │
-│ • Modern UI     │◄──►│ • LLM Client     │◄──►│ • Product CRUD  │
-│ • Chat Interface│    │ • Route Handler  │    │ • Google Cloud  │
-│ • Command History│   │ • Smart Parsing  │    │ • JSON-RPC      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+<details>
+<summary><strong>System Architecture Diagram</strong> - Click to view comprehensive architecture</summary>
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        UI["🖥️ Frontend UI<br/>📱 Modern Web Interface<br/>💬 Natural Language Chat<br/>📊 Real-time Display<br/>🏷️ Interactive Badges"]
+    end
+    
+    subgraph "BFF Layer - Node.js Express Server"
+        BFF["🚀 Express BFF Server<br/>📍 Port 3001"]
+        Router["🛣️ Route Handler<br/>(routes.ts)<br/>📝 /api/command<br/>📊 /api/status"]
+        LLMClient["🤖 LLM Client<br/>(llmClient.ts)<br/>💭 Command Processing<br/>🔄 Tool Call Generation"]
+        MCPClient["🔌 MCP Client<br/>(mcpClient.ts)<br/>🌐 Remote Server Comm<br/>🔐 GCP Auth Tokens"]
+        Cache["💾 Schema Cache<br/>(mcpSchemaCache.ts)<br/>⚡ Tool Definitions<br/>🔄 Auto-refresh"]
+    end
+    
+    subgraph "AI Layer"
+        Ollama["🧠 Ollama LLM<br/>🏠 Local Instance<br/>📝 llama3.1:8b<br/>⚡ Fast Processing"]
+    end
+    
+    subgraph "Remote Services - Google Cloud"
+        MCP["☁️ MCP Server<br/>🌍 Cloud Run Service<br/>🔗 JSON-RPC Protocol<br/>🛡️ Identity Token Auth"]
+        DB["📦 Product Database<br/>📊 CRUD Operations<br/>🔍 Search & Filter<br/>📈 Analytics"]
+    end
+    
+    %% User interactions
+    UI -->|"Natural Language Command"| Router
+    Router -->|"Parse & Route Request"| LLMClient
+    
+    %% LLM processing
+    LLMClient -->|"Process Command"| Ollama
+    Ollama -->|"Generate Tool Call"| LLMClient
+    
+    %% MCP communication  
+    LLMClient -->|"Execute Tool Call"| MCPClient
+    MCPClient -->|"JSON-RPC + Auth"| MCP
+    MCP -->|"Database Query"| DB
+    DB -->|"Product Data"| MCP
+    MCP -->|"JSON Response"| MCPClient
+    
+    %% Response flow
+    MCPClient -->|"Structured Data"| LLMClient
+    LLMClient -->|"Format Response"| Router
+    Router -->|"JSON Response"| UI
+    
+    %% Schema management
+    Cache -->|"Cached Schemas"| LLMClient
+    MCPClient -->|"Schema Updates"| Cache
+    
+    %% Styling
+    classDef frontend fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef bff fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef ai fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef cloud fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    
+    class UI frontend
+    class BFF,Router,LLMClient,MCPClient,Cache bff
+    class Ollama ai
+    class MCP,DB cloud
 ```
 
-**Components:**
+**🔄 Data Flow Steps:**
+1. **User Input** → Frontend UI receives natural language command
+2. **Route Processing** → Express server parses and routes the request  
+3. **LLM Analysis** → Ollama processes command with MCP schema context
+4. **Tool Generation** → LLM generates appropriate MCP tool calls
+5. **Remote Execution** → MCP Client executes tools on Cloud Run server
+6. **Database Operations** → MCP Server performs CRUD operations
+7. **Response Assembly** → Data flows back through the stack
+8. **UI Display** → Frontend renders formatted results
+
+**🏗️ Architecture Highlights:**
+
+- **🎨 Modern UI Layer**: Interactive web interface with natural language processing
+- **🔄 Smart BFF (Backend-for-Frontend)**: Express.js server with intelligent request routing
+- **🤖 AI-Powered Processing**: Local Ollama LLM for fast command interpretation  
+- **🌐 Cloud Integration**: Secure communication with Google Cloud Run MCP server
+- **⚡ Performance Optimized**: Schema caching and connection pooling
+- **🛡️ Enterprise Security**: GCP Identity Token authentication
+
+</details>
+
+**Key Components:**
 - **Frontend**: Modern web interface with natural language chat, Real time response handling and product display, Interactive UI with clickable category/segment badges.
 - **BFF (Backend-for-Frontend)**: Express.js server with LLM integration, Route handler, LLM Client convert commands to tool calls,MCP Client communicates with remote mcp server, Schema cache to cache mcp tool definitions. 
 - **MCP Server**: Remote product management service with CRUD operations, hosted on Google Cloud Run, JSON RPC protocol , authentication with gcp identity tokens.
