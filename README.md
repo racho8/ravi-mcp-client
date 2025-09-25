@@ -268,6 +268,9 @@ sequenceDiagram
 
 ## Local Setup
 
+<details>
+<summary><strong>Prerequisites & Installation</strong> - Node.js setup and project dependencies</summary>
+
 ### Prerequisites
 - Node.js 18+
 - Access to Ollama (local LLM) or configure cloud LLM
@@ -298,11 +301,17 @@ sequenceDiagram
 5. **Open the application**
    Navigate to `http://localhost:3001`
 
-### Environment Variables (Optional)
+</details>
+
+<details>
+<summary><strong>Environment Variables (Optional)</strong> - Custom server configuration</summary>
+
 ```bash
 export MCP_SERVER_URL='https://your-mcp-server.run.app/mcp'
 export PORT=3001
 ```
+
+</details>
 
 ## 🌐 Network Testing Setup
 
@@ -410,6 +419,9 @@ If your team members want to checkout your branch and test it independently:
 
 </details>
 
+<details>
+<summary><strong>Quick Testing Checklist</strong> - Verify setup completion</summary>
+
 ### **Quick Testing Checklist:**
 
 ✅ **For Team Members:**
@@ -424,6 +436,8 @@ If your team members want to checkout your branch and test it independently:
 - [ ] Port 3001 accessible through firewall
 - [ ] External users can access `http://YOUR_IP:3001`
 - [ ] Demo commands work from external network
+
+</details>
 
 <details>
 <summary><strong>Sample Commands for Testing - Click to expand</strong></summary>
@@ -448,12 +462,20 @@ curl -X POST http://172.18.11.22:3001/api/command \
 
 </details>
 
+<details>
+<summary><strong>Security Notes</strong> - Important security considerations</summary>
+
 ### **Security Notes:**
 - **Team Access**: Service account keys should be stored securely and rotated regularly
 - **External Access**: Consider time-limited demos and firewall restrictions
 - **Production**: Use proper load balancers and SSL certificates for public access
 
+</details>
+
 ## Usage Examples
+
+<details>
+<summary><strong>Command Examples</strong> - Sample natural language commands</summary>
 
 **Product Search:**
 - "Show all products"
@@ -471,6 +493,8 @@ curl -X POST http://172.18.11.22:3001/api/command \
 **Duplicate Management:**
 - "Find duplicates"
 - "Clean up duplicate products"
+
+</details>
 
 
 ## Deployment
