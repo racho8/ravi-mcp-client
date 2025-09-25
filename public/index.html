@@ -775,6 +775,46 @@
                 }
             }
             
+            // Handle tools list display (for "List all tools" command)
+            if (result && result.tools && Array.isArray(result.tools)) {
+                html += `<div class="product-list">
+                    <h4><i class="fas fa-tools"></i> Available Tools (${result.tools.length} total)</h4>`;
+                
+                result.tools.forEach(tool => {
+                    const requiredParams = tool.inputSchema && tool.inputSchema.required && tool.inputSchema.required.length > 0 ? 
+                        `<div class="tool-required"><strong>Required:</strong> ${tool.inputSchema.required.join(', ')}</div>` : '';
+                    
+                    const optionalParams = tool.inputSchema && tool.inputSchema.properties ? 
+                        Object.keys(tool.inputSchema.properties).filter(param => 
+                            !tool.inputSchema.required || !tool.inputSchema.required.includes(param)
+                        ) : [];
+                    const optionalParamsText = optionalParams.length > 0 ? 
+                        `<div class="tool-optional"><strong>Optional:</strong> ${optionalParams.join(', ')}</div>` : '';
+                    
+                    html += `<div class="tool-item" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #0ea5e9; border-radius: 12px; padding: 16px; margin: 12px 0;">
+                        <div class="tool-info">
+                            <div class="tool-name" style="color: #0c4a6e; font-weight: 600; font-size: 16px; margin-bottom: 8px;">
+                                <i class="fas fa-cog"></i> ${tool.name}
+                            </div>
+                            <div class="tool-description" style="color: #475569; margin-bottom: 12px; font-size: 14px;">
+                                ${tool.description}
+                            </div>
+                            ${requiredParams}
+                            ${optionalParamsText}
+                        </div>
+                    </div>`;
+                });
+                
+                html += `</div>`;
+            }
+            
+            // Handle simple message responses (like welcome messages)
+            if (!html && result && result.message) {
+                html = `<div class="success-message">
+                    <i class="fas fa-info-circle"></i> ${result.message}
+                </div>`;
+            }
+            
             // If no specific formatting was applied, show a generic message
             if (!html) {
                 if (result) {
