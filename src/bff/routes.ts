@@ -130,41 +130,7 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       console.log(`[Counting Query] Found ${products.length} products in ${context || 'total'}`);
     }
     
-    // 3.5. Apply name-based filtering for regular "find" commands
-    if (!isCountingQuery && llmResult.tool === 'list_products' && mcpResult.result && Array.isArray(mcpResult.result)) {
-      const lowerCommand = command.toLowerCase();
-      let products = mcpResult.result;
-      let filtered = false;
-      
-      if (lowerCommand.includes('macbook') || lowerCommand.includes('mac book')) {
-        products = products.filter((p: any) => 
-          p.name && p.name.toLowerCase().includes('macbook')
-        );
-        filtered = true;
-        console.log(`[Name Filter] Filtered to ${products.length} MacBook products`);
-      } else if (lowerCommand.includes('iphone')) {
-        products = products.filter((p: any) => 
-          p.name && p.name.toLowerCase().includes('iphone')
-        );
-        filtered = true;
-        console.log(`[Name Filter] Filtered to ${products.length} iPhone products`);
-      } else if (lowerCommand.includes('laptop')) {
-        products = products.filter((p: any) => 
-          p.name && p.name.toLowerCase().includes('laptop')
-        );
-        filtered = true;
-        console.log(`[Name Filter] Filtered to ${products.length} Laptop products`);
-      }
-      
-      // Update the result if filtering was applied
-      if (filtered) {
-        mcpResult = {
-          jsonrpc: "2.0",
-          id: mcpResult.id,
-          result: products
-        };
-      }
-    }
+    // 3.5. Apply name-based filtering for regular "find" commands (moved after update processing)
     
     // 4. Handle special duplicate management commands
     if (command.toLowerCase().includes('duplicate') || command.toLowerCase().includes('find duplicates')) {
@@ -238,75 +204,50 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       }
     }
     
-    // 5. Handle update commands: convert to list_products + filter for updates
-    if (command.toLowerCase().includes('update') && 
-        (llmResult.tool === 'get_product_by_name' || llmResult.tool === 'list_products' || 
-         llmResult.tool === 'update_product' || llmResult.tool === 'update_products')) {
+    // 5. Handle update commands: resolve product names to UUIDs
+    if (llmResult.tool === 'update_product' || llmResult.tool === 'update_products') {
       
-      console.log(`[Update Flow] Detected update command, finding product first`);
+            
+      console.log(`[Update Flow] Processing ${llmResult.tool} command`);
       
-      // Get all products first
+      // Get all products to resolve names to UUIDs
+      const listResult = await callMCP({ tool: 'list_products', parameters: {} });
       let allProducts = [];
-      if (llmResult.tool === 'get_product_by_name') {
-        // Convert to list_products to avoid get_product_by_name issues
-        const listResult = await callMCP({ tool: 'list_products', parameters: {} });
-        if (listResult.result && Array.isArray(listResult.result)) {
-          allProducts = listResult.result;
-        }
-      } else if (llmResult.tool === 'update_product') {
-        // For direct update_product calls, get all products to resolve names to IDs
-        const listResult = await callMCP({ tool: 'list_products', parameters: {} });
-        if (listResult.result && Array.isArray(listResult.result)) {
-          allProducts = listResult.result;
-        }
-      } else if (llmResult.tool === 'update_products') {
-        // For bulk update_products calls, get all products to resolve names to IDs
-        const listResult = await callMCP({ tool: 'list_products', parameters: {} });
-        if (listResult.result && Array.isArray(listResult.result)) {
-          allProducts = listResult.result;
-        }
-      } else if (mcpResult.result && Array.isArray(mcpResult.result)) {
-        allProducts = mcpResult.result;
+      if (listResult.result && Array.isArray(listResult.result)) {
+        allProducts = listResult.result;
       }
       
       if (allProducts.length > 0) {
-        // Handle single product updates
-        if (llmResult.tool === 'get_product_by_name' || llmResult.tool === 'update_product') {
-          // Extract product name and price from the original command
-          const priceMatch = command.match(/(\d+\.?\d*)/);
-          let productName = '';
+        if (llmResult.tool === 'update_product') {
+          // Single product update
+          const productNameOrId = llmResult.parameters.id;
+          const newPrice = llmResult.parameters.price;
           
-          if (llmResult.tool === 'get_product_by_name' && llmResult.parameters.name) {
-            productName = llmResult.parameters.name;
-          } else if (llmResult.tool === 'update_product' && llmResult.parameters.id) {
-            // LLM passed product name as 'id'
-            productName = llmResult.parameters.id;
-          } else {
-            // Try to extract product name from command
-            const updateMatch = command.match(/update.*?(?:price of|product)\s+([^0-9]+?)\s+(?:to|with)/i);
-            if (updateMatch) {
-              productName = updateMatch[1].trim();
-            }
-          }
-          
-          if (priceMatch && productName) {
-            let newPrice = parseFloat(priceMatch[1]);
+          if (productNameOrId && newPrice) {
+            // Check if this is already a UUID or a product name
+            const looksLikeUUID = productNameOrId.includes('-') && productNameOrId.length > 30;
             
-            // If LLM already extracted price, use that instead
-            if (llmResult.tool === 'update_product' && llmResult.parameters.price) {
-              newPrice = llmResult.parameters.price;
+            let matchingProduct = null;
+            if (looksLikeUUID) {
+              // Search by UUID
+              matchingProduct = allProducts.find((product: any) => product.id === productNameOrId);
+            } else {
+              // Search by name (case-insensitive exact match first, then contains)
+              matchingProduct = allProducts.find((product: any) => 
+                product.name && product.name.toLowerCase() === productNameOrId.toLowerCase()
+              );
+              if (!matchingProduct) {
+                // Fallback to contains search
+                matchingProduct = allProducts.find((product: any) => 
+                  product.name && product.name.toLowerCase().includes(productNameOrId.toLowerCase())
+                );
+              }
             }
-            
-            // Find matching product (case-insensitive)
-            const matchingProduct = allProducts.find((product: any) => 
-              product.name && product.name.toLowerCase() === productName.toLowerCase()
-            );
             
             if (matchingProduct) {
-              console.log(`[Update Flow] Found product ${matchingProduct.id} (${matchingProduct.name}), updating price to ${newPrice}`);
-              console.log(`[Update Flow] Product details:`, JSON.stringify(matchingProduct, null, 2));
+              console.log(`[Update Flow] Found product: ${matchingProduct.name} (${matchingProduct.id}), updating price from ${matchingProduct.price} to ${newPrice}`);
               
-              // Call update_product with the actual product ID
+              // Call update_product with actual UUID
               const updateResult = await callMCP({
                 tool: 'update_product',
                 parameters: {
@@ -315,13 +256,8 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
                 }
               });
               
-              // Enhance response with meaningful information
+              // Return enhanced response
               if (updateResult.result) {
-                const updatedProduct = {
-                  ...matchingProduct,
-                  price: newPrice
-                };
-                
                 mcpResult = {
                   jsonrpc: "2.0",
                   id: updateResult.id,
@@ -331,100 +267,36 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
                     productName: matchingProduct.name,
                     oldPrice: matchingProduct.price,
                     newPrice: newPrice,
-                    updatedProduct: updatedProduct
+                    updatedProduct: {
+                      ...matchingProduct,
+                      price: newPrice
+                    }
                   }
                 };
               } else {
                 mcpResult = updateResult;
               }
             } else {
-              console.warn(`[Update Flow] Could not find product named '${productName}'`);
-              mcpResult = { error: `Product '${productName}' not found` };
+              console.warn(`[Update Flow] Could not find product: '${productNameOrId}'`);
+              mcpResult = { error: `Product '${productNameOrId}' not found` };
             }
           } else {
-            console.warn('[Update Flow] Could not extract price or product name from command:', command);
-            mcpResult = { error: 'Could not extract price or product name from update command' };
+            console.warn(`[Update Flow] Missing product name/id or price in parameters:`, llmResult.parameters);
+            mcpResult = { error: 'Missing product name or price in update command' };
           }
+        } 
+        // Handle bulk updates if needed
+        else if (llmResult.tool === 'update_products') {
+          console.log(`[Update Flow] Bulk update not yet implemented in simplified flow`);
+          mcpResult = { error: 'Bulk update not yet implemented' };
         }
-        // Handle bulk product updates
-        else if (llmResult.tool === 'update_products' && llmResult.parameters.products) {
-          console.log(`[Update Flow] Processing bulk update for ${llmResult.parameters.products.length} product types`);
-          
-          const productsToUpdate = [];
-          for (const productUpdate of llmResult.parameters.products) {
-            if (productUpdate.id) {
-              // Find ALL matching products by name (case-insensitive) - this handles "all" scenarios
-              // Use contains search for bulk updates (e.g., "iPhone" matches "iPhone 14", "iPhone 15")
-              const searchTerm = productUpdate.id.toLowerCase();
-              const matchingProducts = allProducts.filter((product: any) => 
-                product.name && product.name.toLowerCase().includes(searchTerm)
-              );
-              
-              if (matchingProducts.length > 0) {
-                console.log(`[Update Flow] Found ${matchingProducts.length} products containing '${productUpdate.id}'`);
-                
-                for (const matchingProduct of matchingProducts) {
-                  productsToUpdate.push({
-                    id: matchingProduct.id,
-                    price: productUpdate.price,
-                    ...(productUpdate.name && { name: productUpdate.name }),
-                    ...(productUpdate.category && { category: productUpdate.category })
-                  });
-                  console.log(`[Update Flow] Resolved '${productUpdate.id}' to UUID: ${matchingProduct.id} (${matchingProduct.name}, current price: ${matchingProduct.price})`);
-                }
-              } else {
-                console.warn(`[Update Flow] Could not find any products containing '${productUpdate.id}'`);
-              }
-            }
-          }
-          
-          if (productsToUpdate.length > 0) {
-            console.log(`[Update Flow] Updating ${productsToUpdate.length} products`);
-            const updateResult = await callMCP({
-              tool: 'update_products',
-              parameters: {
-                products: productsToUpdate
-              }
-            });
-            
-            // Enhance response with meaningful information and show updated products
-            if (updateResult.result) {
-              const productName = llmResult.parameters.products[0].id;
-              const newPrice = llmResult.parameters.products[0].price;
-              
-              // Get the updated products to show in response
-              const updatedProducts = productsToUpdate.map(product => {
-                const originalProduct = allProducts.find((p: any) => p.id === product.id);
-                return {
-                  ...originalProduct,
-                  price: product.price
-                };
-              });
-              
-              mcpResult = {
-                jsonrpc: "2.0",
-                id: updateResult.id,
-                result: {
-                  success: true,
-                  message: `Successfully updated ${productsToUpdate.length} products named '${productName}' to price ${newPrice}`,
-                  updatedCount: productsToUpdate.length,
-                  productName: productName,
-                  newPrice: newPrice,
-                  updatedProducts: updatedProducts
-                }
-              };
-            } else {
-              mcpResult = updateResult;
-            }
-          } else {
-            mcpResult = { error: 'No matching products found for bulk update' };
-          }
-        }
+      } else {
+        mcpResult = { error: 'No products found in database' };
       }
     }
     
     // 5. Handle partial name matching fallback for non-update commands
-    else if (llmResult.tool === 'get_product_by_name' && 
+    if (llmResult.tool === 'get_product_by_name' && 
         mcpResult.error && 
         mcpResult.error.message === 'Internal error' &&
         mcpResult.error.data === 'product service returned status 404') {
@@ -493,6 +365,50 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
             totalCategories: categoryGroups.length,
             categories: categoryGroups
           }
+        };
+      }
+    }
+    
+    // 6.5. Apply name-based filtering for regular "find" commands (only if no update was processed)
+    if (!isCountingQuery && 
+        llmResult.tool === 'list_products' && 
+        mcpResult.result && 
+        Array.isArray(mcpResult.result) &&
+        !command.toLowerCase().includes('update') &&
+        !command.toLowerCase().includes('change') &&
+        !command.toLowerCase().includes('set') &&
+        !command.toLowerCase().includes('modify')) {
+      
+      const lowerCommand = command.toLowerCase();
+      let products = mcpResult.result;
+      let filtered = false;
+      
+      if (lowerCommand.includes('macbook') || lowerCommand.includes('mac book')) {
+        products = products.filter((p: any) => 
+          p.name && p.name.toLowerCase().includes('macbook')
+        );
+        filtered = true;
+        console.log(`[Name Filter] Filtered to ${products.length} MacBook products`);
+      } else if (lowerCommand.includes('iphone')) {
+        products = products.filter((p: any) => 
+          p.name && p.name.toLowerCase().includes('iphone')
+        );
+        filtered = true;
+        console.log(`[Name Filter] Filtered to ${products.length} iPhone products`);
+      } else if (lowerCommand.includes('laptop')) {
+        products = products.filter((p: any) => 
+          p.name && p.name.toLowerCase().includes('laptop')
+        );
+        filtered = true;
+        console.log(`[Name Filter] Filtered to ${products.length} Laptop products`);
+      }
+      
+      // Update the result if filtering was applied
+      if (filtered) {
+        mcpResult = {
+          jsonrpc: "2.0",
+          id: mcpResult.id,
+          result: products
         };
       }
     }

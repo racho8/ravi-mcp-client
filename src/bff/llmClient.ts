@@ -17,9 +17,19 @@ IMPORTANT RULES:
 - For "find product named [name]" or "get product [name]" → use get_product_by_name
 - For "show all products" or "list products" → use list_products
 - For "show all products grouped by category" → use list_products (not get_products_by_category!)
-- For "update price of [product]" or "change [product] price" → use update_product with id as product name and new price
+- For update commands → use update_product with product name as id and extract the new price
 - For "how many" or "count" queries → use list_products to get all products for counting
 - For creating, updating, deleting → use appropriate tools
+
+SMART UPDATE HANDLING:
+- For ANY update command (regardless of format), extract the product name and new price
+- Use update_product with: {"id": "product_name", "price": new_price}
+- The route handler will resolve product names to actual UUIDs
+- Examples:
+  - "Update iPhone18 price to 666" → {"tool": "update_product", "parameters": {"id": "iPhone18", "price": 666}}
+  - "Update the price of iPhone 15 Pro to 299" → {"tool": "update_product", "parameters": {"id": "iPhone 15 Pro", "price": 299}}
+  - "Set MacBook Pro price to 2500" → {"tool": "update_product", "parameters": {"id": "MacBook Pro", "price": 2500}}
+  - "Change Laptop1 price to 1200" → {"tool": "update_product", "parameters": {"id": "Laptop1", "price": 1200}}
 
 COUNTING QUERIES:
 - "How many products are there" → use list_products
@@ -64,15 +74,21 @@ EXAMPLE MAPPINGS:
 - "Show me all MacBooks" → {"tool": "list_products", "parameters": {}}
 - "Find MacBook products" → {"tool": "list_products", "parameters": {}}
 - "Show all products" → {"tool": "list_products", "parameters": {}}
-- "Update the price of iPhone 17 to 799" → {"tool": "update_product", "parameters": {"id": "iPhone 17", "price": 799}}
-- "Change Laptop1 price to 1200" → {"tool": "update_product", "parameters": {"id": "Laptop1", "price": 1200}}
-- "Set MacBook Pro price to 2999" → {"tool": "update_product", "parameters": {"id": "MacBook Pro", "price": 2999}}
-- "Update product iPhone 15 Pro with price 1100" → {"tool": "update_product", "parameters": {"id": "iPhone 15 Pro", "price": 1100}}
-- "Update price of all MacBook Pro 16-inch to 2900" → {"tool": "update_products", "parameters": {"products": [{"id": "MacBook Pro 16-inch", "price": 2900}]}}
-- "Update all MacBook products to price 2800" → {"tool": "update_products", "parameters": {"products": [{"id": "MacBook Pro 16-inch", "price": 2800}]}}
-- "Set all Laptop1 prices to 1500" → {"tool": "update_products", "parameters": {"products": [{"id": "Laptop1", "price": 1500}]}}
-- "Change all iPhone prices to 900" → {"tool": "update_products", "parameters": {"products": [{"id": "iPhone", "price": 900}]}}
-- "Find duplicate products" → {"tool": "list_products", "parameters": {}}
+- "Update the price of iPhone 17 to 799" → {"tool": "list_products", "parameters": {}}
+- "Change Laptop1 price to 1200" → {"tool": "list_products", "parameters": {}}
+- "Set MacBook Pro price to 2999" → {"tool": "list_products", "parameters": {}}
+- "Update product iPhone 15 Pro with price 1100" → {"tool": "list_products", "parameters": {}}
+- "Update price of all MacBook Pro 16-inch to 2900" → {"tool": "list_products", "parameters": {}}
+- "Update all MacBook products to price 2800" → {"tool": "list_products", "parameters": {}}
+- "Set all Laptop1 prices to 1500" → {"tool": "list_products", "parameters": {}}
+- "Change all iPhone prices to 900" → {"tool": "list_products", "parameters": {}}
+
+UPDATE COMMAND PROCESSING:
+The route handler will detect update intent from commands containing:
+- "update", "change", "set", "modify" + "price"
+- Extract product name patterns and new price values
+- Match products from list_products result
+- Call update_product or update_products with actual UUIDs
 - "Show me duplicate products" → {"tool": "list_products", "parameters": {}}
 - "Identify duplicates" → {"tool": "list_products", "parameters": {}}
 - "Clean up duplicate products" → {"tool": "list_products", "parameters": {}}

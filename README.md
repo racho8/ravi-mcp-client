@@ -37,9 +37,111 @@ This project demonstrates a complete AI-powered product management system that a
 ```
 
 **Components:**
-- **Frontend**: Modern web interface with natural language chat
-- **BFF (Backend-for-Frontend)**: Express.js server with LLM integration
-- **MCP Server**: Remote product management service on Google Cloud Run
+- **Frontend**: Modern web interface with natural language chat, Real time response handling and product display, Interactive UI with clickable category/segment badges.
+- **BFF (Backend-for-Frontend)**: Express.js server with LLM integration, Route handler, LLM Client convert commands to tool calls,MCP Client communicates with remote mcp server, Schema cache to cache mcp tool definitions. 
+- **MCP Server**: Remote product management service with CRUD operations, hosted on Google Cloud Run, JSON RPC protocol , authentication with gcp identity tokens.
+
+## 📊 Sample Flow: "Show All Products"
+
+The following sequence diagram illustrates how the system processes a natural language command like "show all products":
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend as Frontend UI<br/>(index.html)
+    participant BFF as Express BFF<br/>(routes.ts)
+    participant LLM as LLM Client<br/>(llmClient.ts)
+    participant Ollama as Ollama LLM<br/>(Local)
+    participant MCP as MCP Client<br/>(mcpClient.ts)
+    participant GCP as GCP Auth
+    participant Server as MCP Server<br/>(Google Cloud)
+    participant DB as Product Database
+
+    User->>Frontend: Types "show all products"
+    Frontend->>BFF: POST /api/command<br/>{"command": "show all products"}
+    
+    Note over BFF: processNaturalLanguageCommand()
+    BFF->>LLM: callLLM("show all products")
+    
+    Note over LLM: Fetch MCP tool schemas
+    LLM->>Server: GET tool definitions (cached)
+    Server-->>LLM: Available tools & schemas
+    
+    Note over LLM: Build dynamic prompt with tools
+    LLM->>Ollama: POST /api/generate<br/>{"model": "llama3", "prompt": "..."}
+    Ollama-->>LLM: {"tool": "list_products", "parameters": {}}
+    LLM-->>BFF: Tool invocation result
+    
+    Note over BFF: callMCP(toolInvocation)
+    BFF->>MCP: Execute tool call
+    
+    Note over MCP: Authentication flow
+    MCP->>GCP: execSync('gcloud auth print-identity-token')
+    GCP-->>MCP: Bearer token
+    
+    Note over MCP: Build JSON-RPC payload
+    MCP->>Server: POST /mcp<br/>{"jsonrpc": "2.0", "method": "tools/call",<br/>"params": {"name": "list_products"}}
+    
+    Note over Server: MCP Server processing
+    Server->>DB: SELECT * FROM products
+    DB-->>Server: Product records
+    Server-->>MCP: {"result": [{"id": "uuid1", "name": "iPhone 15", ...}, ...]}
+    
+    MCP-->>BFF: MCP response with products
+    
+    Note over BFF: Post-processing & filtering
+    alt Counting Query
+        BFF->>BFF: Convert to count format
+    else Name-based filtering
+        BFF->>BFF: Filter by product name patterns
+    else Grouping request
+        BFF->>BFF: Group by category/segment
+    else Duplicate management
+        BFF->>BFF: Analyze duplicates
+    end
+    
+    BFF-->>Frontend: {"result": {"result": [products...]}}
+    
+    Note over Frontend: formatResponse(data)
+    Frontend->>Frontend: Generate product cards with<br/>clickable categories/segments
+    Frontend->>User: Display formatted product list<br/>with interactive UI elements
+    
+    Note over User,DB: Complete flow: ~200-500ms
+```
+
+### Flow Breakdown
+
+**1. User Input (Frontend)**
+- User types natural language command in chat interface
+- JavaScript captures input and sends POST request to BFF
+
+**2. Intent Recognition (LLM)**
+- Dynamically fetches MCP tool schemas for up-to-date prompting
+- Builds comprehensive prompt with 200+ lines of tool definitions
+- Ollama LLM converts natural language to structured tool call
+
+**3. Authentication & MCP Call**
+- Automatically handles GCP authentication via gcloud CLI
+- Builds JSON-RPC payload following MCP protocol standards
+- Sends authenticated request to remote MCP server
+
+**4. Data Processing**
+- MCP server executes database operations
+- Returns structured product data
+- BFF applies intelligent post-processing (filtering, grouping, counting)
+
+**5. Response Formatting**
+- Frontend renders products as interactive cards
+- Adds clickable category/segment badges for filtering
+- Displays with animations and modern UI elements
+
+### Key Architecture Benefits
+
+- **Separation of Concerns**: Each layer has distinct responsibilities
+- **Smart Caching**: Tool schemas cached for performance
+- **Flexible Authentication**: Works locally and in production
+- **Intelligent Processing**: Post-processing handles complex queries
+- **Modern UX**: Real-time, interactive product displays
 
 ## Local Setup
 

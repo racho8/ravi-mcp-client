@@ -146,6 +146,13 @@ export async function callMCP(toolInvocation: any): Promise<any> {
         };
         break;
       case 'update_product':
+        // Check if ID looks like a product name instead of a UUID
+        const updateId = toolInvocation.parameters.id;
+        if (updateId && (!updateId.includes('-') || updateId.length < 30)) {
+          console.log(`[update_product] WARNING: ID '${updateId}' looks like a product name, not a UUID`);
+          console.log(`[update_product] This may cause the update to fail. Consider using the list_products flow instead.`);
+        }
+        
         // Expect ID to already be resolved to actual product ID
         rpcPayload = {
           jsonrpc: "2.0",
@@ -172,6 +179,16 @@ export async function callMCP(toolInvocation: any): Promise<any> {
         };
         break;
       case 'update_products':
+        // Check if any IDs look like product names instead of UUIDs
+        if (toolInvocation.parameters.products) {
+          for (const product of toolInvocation.parameters.products) {
+            if (product.id && (!product.id.includes('-') || product.id.length < 30)) {
+              console.log(`[update_products] WARNING: ID '${product.id}' looks like a product name, not a UUID`);
+              console.log(`[update_products] This may cause the update to fail. Consider using the list_products flow instead.`);
+            }
+          }
+        }
+        
         // Expect IDs to already be resolved to actual product IDs
         rpcPayload = {
           jsonrpc: "2.0",
