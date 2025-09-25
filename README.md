@@ -1,4 +1,4 @@
-# Ravi MCP Client
+# MCP Client
 
 Modern AI-powered product management system with natural language interface. Built with TypeScript, Express, and the Model Context Protocol (MCP).
 
@@ -42,6 +42,9 @@ This project demonstrates a complete AI-powered product management system that a
 - **MCP Server**: Remote product management service with CRUD operations, hosted on Google Cloud Run, JSON RPC protocol , authentication with gcp identity tokens.
 
 ## 📊 Sample Flow: "Show All Products"
+
+<details>
+<summary><strong>Click to view detailed sequence diagram</strong></summary>
 
 The following sequence diagram illustrates how the system processes a natural language command like "show all products":
 
@@ -143,6 +146,126 @@ sequenceDiagram
 - **Intelligent Processing**: Post-processing handles complex queries
 - **Modern UX**: Real-time, interactive product displays
 
+</details>
+
+## 🔄 Sample Flow: "Update iPhone18 price to 666"
+
+<details>
+<summary><strong>Click to view detailed update sequence diagram</strong></summary>
+
+The following sequence diagram illustrates how the system processes an update command using the **LLM-first approach**:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend as Frontend UI<br/>(index.html)
+    participant BFF as Express BFF<br/>(routes.ts)
+    participant LLM as LLM Client<br/>(llmClient.ts)
+    participant Ollama as Ollama LLM<br/>(Local)
+    participant MCP as MCP Client<br/>(mcpClient.ts)
+    participant GCP as GCP Auth
+    participant Server as MCP Server<br/>(Google Cloud)
+    participant DB as Product Database
+
+    User->>Frontend: Types "Update iPhone18 price to 666"
+    Frontend->>BFF: POST /api/command<br/>{"command": "Update iPhone18 price to 666"}
+    
+    Note over BFF: processNaturalLanguageCommand()
+    BFF->>LLM: callLLM("Update iPhone18 price to 666")
+    
+    Note over LLM: Fetch cached MCP tool schemas
+    LLM->>LLM: Build dynamic prompt with update_product tool definition
+    
+    Note over LLM: LLM-first natural language parsing
+    LLM->>Ollama: POST /api/generate<br/>{"model": "llama3", "prompt": "...analyze and return tool call"}
+    Ollama-->>LLM: {"tool": "update_product",<br/>"parameters": {"id": "iPhone18", "price": 666}}
+    LLM-->>BFF: Tool invocation result
+    
+    Note over BFF: Handle update commands flow
+    BFF->>BFF: Detect llmResult.tool === 'update_product'
+    
+    Note over BFF: Initial attempt (will fail for product names)
+    BFF->>MCP: callMCP(update_product, {id: "iPhone18", price: 666})
+    
+    Note over MCP: Authentication & JSON-RPC call
+    MCP->>GCP: execSync('gcloud auth print-identity-token')
+    GCP-->>MCP: Bearer token
+    MCP->>Server: POST /mcp<br/>{"method": "tools/call", "params": {<br/>"name": "update_product", "arguments": {"id": "iPhone18", "price": 666}}}
+    
+    Note over Server: UUID validation fails
+    Server->>DB: No product found with ID "iPhone18"
+    Server-->>MCP: {"result": {"response": "datastore: no such entity"}}
+    MCP-->>BFF: Error response
+    
+    Note over BFF: Smart UUID resolution flow
+    BFF->>BFF: Detect update_product command needs resolution
+    BFF->>MCP: callMCP(list_products, {}) - Get all products
+    
+    MCP->>Server: POST /mcp<br/>{"method": "tools/call", "params": {"name": "list_products"}}
+    Server->>DB: SELECT * FROM products
+    DB-->>Server: All product records
+    Server-->>MCP: {"result": [{"id": "uuid1", "name": "iPhone18", "price": 399}, ...]}
+    MCP-->>BFF: Complete product list
+    
+    Note over BFF: Product name matching
+    BFF->>BFF: Find product where name.toLowerCase() === "iphone18"
+    BFF->>BFF: matchingProduct = {id: "806403a6-...", name: "iPhone18", price: 399}
+    
+    Note over BFF: Execute update with resolved UUID
+    BFF->>MCP: callMCP(update_product, {<br/>id: "806403a6-c2c1-439c-8d9f-7d254cbf9b1b",<br/>price: 666})
+    
+    MCP->>Server: POST /mcp<br/>{"method": "tools/call", "params": {<br/>"name": "update_product", "arguments": {<br/>"id": "806403a6-c2c1-439c-8d9f-7d254cbf9b1b", "price": 666}}}
+    
+    Server->>DB: UPDATE products SET price = 666<br/>WHERE id = '806403a6-...'
+    DB-->>Server: Update successful
+    Server-->>MCP: {"result": {"success": true, "updated": {...}}}
+    MCP-->>BFF: Success response
+    
+    Note over BFF: Enhanced response formatting
+    BFF->>BFF: Create enhanced response:<br/>{success: true, message: "Successfully updated 'iPhone18' price to 666",<br/>productName: "iPhone18", oldPrice: 399, newPrice: 666}
+    
+    BFF-->>Frontend: {"result": {"success": true, "message": "...", "updatedProduct": {...}}}
+    
+    Note over Frontend: Display success feedback
+    Frontend->>Frontend: Show success message with<br/>old price → new price transition
+    Frontend->>User: "✅ Successfully updated 'iPhone18' price<br/>from 399 to 666"
+    
+    Note over User,DB: Complete update flow: ~300-800ms
+```
+
+### Update Flow Breakdown
+
+**1. LLM-First Natural Language Processing**
+- User provides command in any natural format: "Update iPhone18 price to 666"
+- LLM intelligently parses intent and extracts: `tool: "update_product"`, `parameters: {id: "iPhone18", price: 666}`
+- **No regex patterns** - pure LLM intelligence for command understanding
+
+**2. Smart UUID Resolution**
+- Initial attempt fails because "iPhone18" is a product name, not a UUID
+- System automatically fetches all products via `list_products`
+- Performs intelligent name matching (case-insensitive, exact + partial)
+- Resolves product name → UUID: "iPhone18" → "806403a6-c2c1-439c-8d9f-7d254cbf9b1b"
+
+**3. Successful Update Execution**
+- Calls `update_product` with resolved UUID and new price
+- Database update executed with proper entity identification
+- Returns enhanced response with old price, new price, and success confirmation
+
+**4. Enhanced User Feedback**
+- Shows clear before/after price comparison
+- Confirms which product was updated by name
+- Provides detailed success messaging
+
+### LLM-First Approach Benefits
+
+- **Natural Language Flexibility**: Works with "Update iPhone18 price to 666", "Update the price of iPhone18 to 666", "Set iPhone18 to $666"
+- **No Regex Dependency**: Eliminates brittle pattern matching - LLM handles all command variations
+- **Smart Error Recovery**: Automatic UUID resolution when product names are provided
+- **Enhanced UX**: Detailed feedback with price transitions and product confirmations
+- **Robust Matching**: Handles exact name matches, partial matches, and case-insensitive matching
+
+</details>
+
 ## Local Setup
 
 ### Prerequisites
@@ -181,6 +304,155 @@ export MCP_SERVER_URL='https://your-mcp-server.run.app/mcp'
 export PORT=3001
 ```
 
+## 🌐 Network Testing Setup
+
+<details>
+<summary><strong>For Team Members (Recommended) - Click to expand</strong></summary>
+
+### **For Team Members (Recommended):**
+
+If your team members want to checkout your branch and test it independently:
+
+#### **Setup Steps:**
+
+1. **Grant Cloud Run Invoker Role** (Project Owner does this once):
+   ```bash
+   # Replace with team member's service account email
+   gcloud run services add-iam-policy-binding ravi-mcp-server \
+     --region=europe-west3 \
+     --member="serviceAccount:TEAM_MEMBER@YOUR_PROJECT.iam.gserviceaccount.com" \
+     --role="roles/run.invoker"
+   ```
+
+2. **Team Member Setup:**
+   ```bash
+   # Clone and checkout your branch
+   git clone https://github.com/racho8/ravi-mcp-client.git
+   cd ravi-mcp-client
+   git checkout main  # or your specific branch
+   
+   # Install dependencies
+   npm install
+   npm run build
+   
+   # Set up authentication (create service account key)
+   gcloud iam service-accounts create mcp-testing
+   gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+     --member="serviceAccount:mcp-testing@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+     --role="roles/run.invoker"
+   gcloud iam service-accounts keys create ~/mcp-key.json \
+     --iam-account=mcp-testing@YOUR_PROJECT_ID.iam.gserviceaccount.com
+   ```
+
+3. **Environment Configuration:**
+   ```bash
+   # Set environment variables
+   export GOOGLE_APPLICATION_CREDENTIALS="$HOME/mcp-key.json"
+   export NODE_ENV=production
+   export MCP_SERVER_URL="https://ravi-mcp-server-256110662801.europe-west3.run.app/mcp"
+   export PORT=3001
+   
+   # Start the server
+   npm start
+   ```
+
+4. **Test the setup:**
+   ```bash
+   curl -X POST http://localhost:3001/api/command \
+     -H "Content-Type: application/json" \
+   -d '{"command": "Show all products"}'
+```
+
+</details>
+
+<details>
+<summary><strong>For External Viewers (Demo Access) - Click to expand</strong></summary>
+
+### **For External Viewers (Demo Access):**If you want to demo the application to external people without giving them access to your codebase:
+
+#### **Host with Specific IP Access:**
+
+1. **Start server with network binding:**
+   ```bash
+   # On your machine (find your IP first)
+   ifconfig | grep "inet " | grep -v 127.0.0.1
+   # Example output: inet 172.18.11.22 netmask 0xffffff00 broadcast 172.18.11.255
+   
+   # Start server (binds to all interfaces by default)
+   export PORT=3001
+   npm start
+   
+   # Server will be accessible at your specific IP
+   echo "Application running at: http://172.18.11.22:3001"
+   ```
+
+2. **Share access with external viewers:**
+   ```
+   Demo URL: http://172.18.11.22:3001
+   
+   Try these commands:
+   - "Show all products"
+   - "Find all iPhone products" 
+   - "Update iPhone18 price to 999"
+   - "Count MacBook products"
+   ```
+
+3. **Network firewall considerations:**
+   ```bash
+   # macOS: Allow incoming connections on port 3001
+   # System Preferences → Security & Privacy → Firewall → Options
+   # Add Node.js application and allow incoming connections
+   
+   # Or use command line (if needed):
+   sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/local/bin/node
+   sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/local/bin/node
+   ```
+
+</details>
+
+### **Quick Testing Checklist:**
+
+✅ **For Team Members:**
+- [ ] Service account created with Cloud Run Invoker role
+- [ ] `GOOGLE_APPLICATION_CREDENTIALS` pointing to key file
+- [ ] `NODE_ENV=production` set
+- [ ] Application starts without auth errors
+- [ ] Can successfully call `/api/command` endpoint
+
+✅ **For External Viewers:**
+- [ ] Your machine IP address determined (e.g., 172.18.11.22)
+- [ ] Port 3001 accessible through firewall
+- [ ] External users can access `http://YOUR_IP:3001`
+- [ ] Demo commands work from external network
+
+<details>
+<summary><strong>Sample Commands for Testing - Click to expand</strong></summary>
+
+### **Sample Commands for Testing:**
+```bash
+# Basic product listing
+curl -X POST http://172.18.11.22:3001/api/command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "Show all products"}'
+
+# Product search  
+curl -X POST http://172.18.11.22:3001/api/command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "Find all iPhone products"}'
+
+# Product update (LLM-first approach)
+curl -X POST http://172.18.11.22:3001/api/command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "Update iPhone18 price to 999"}'
+```
+
+</details>
+
+### **Security Notes:**
+- **Team Access**: Service account keys should be stored securely and rotated regularly
+- **External Access**: Consider time-limited demos and firewall restrictions
+- **Production**: Use proper load balancers and SSL certificates for public access
+
 ## Usage Examples
 
 **Product Search:**
@@ -203,14 +475,19 @@ export PORT=3001
 
 ## Deployment
 
-### Local Development
+<details>
+<summary><strong>Local Development Setup</strong> - Build and run locally</summary>
+
 ```bash
 npm run build
 npm start
 ```
 Access at: `http://localhost:3001`
 
-### Production Deployment
+</details>
+
+<details>
+<summary><strong>Production Deployment</strong> - Environment variables and authentication</summary>
 
 **Current Status**: This project is designed for local development with remote MCP server integration.
 
@@ -231,6 +508,8 @@ MCP_AUTH_TOKEN=your-auth-token-here
 - **Local Development**: Uses `gcloud` CLI authentication automatically
 - **Production**: Set `MCP_AUTH_TOKEN` environment variable if needed
 - **Public Access**: If your MCP server allows unauthenticated access, no token needed
+
+</details>
 
 **Note**: The MCP server is already deployed and running on Google Cloud Run. You only need to deploy the frontend/BFF layer.
 
