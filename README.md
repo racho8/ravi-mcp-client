@@ -1,4 +1,4 @@
-# Ravi MCP Client
+# MCP Client
 
 Modern AI-powered product management system with natural language interface. Built with TypeScript, Express, and the Model Context Protocol (MCP).
 
@@ -142,6 +142,119 @@ sequenceDiagram
 - **Flexible Authentication**: Works locally and in production
 - **Intelligent Processing**: Post-processing handles complex queries
 - **Modern UX**: Real-time, interactive product displays
+
+## 🔄 Sample Flow: "Update iPhone18 price to 666"
+
+The following sequence diagram illustrates how the system processes an update command using the **LLM-first approach**:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend as Frontend UI<br/>(index.html)
+    participant BFF as Express BFF<br/>(routes.ts)
+    participant LLM as LLM Client<br/>(llmClient.ts)
+    participant Ollama as Ollama LLM<br/>(Local)
+    participant MCP as MCP Client<br/>(mcpClient.ts)
+    participant GCP as GCP Auth
+    participant Server as MCP Server<br/>(Google Cloud)
+    participant DB as Product Database
+
+    User->>Frontend: Types "Update iPhone18 price to 666"
+    Frontend->>BFF: POST /api/command<br/>{"command": "Update iPhone18 price to 666"}
+    
+    Note over BFF: processNaturalLanguageCommand()
+    BFF->>LLM: callLLM("Update iPhone18 price to 666")
+    
+    Note over LLM: Fetch cached MCP tool schemas
+    LLM->>LLM: Build dynamic prompt with update_product tool definition
+    
+    Note over LLM: LLM-first natural language parsing
+    LLM->>Ollama: POST /api/generate<br/>{"model": "llama3", "prompt": "...analyze and return tool call"}
+    Ollama-->>LLM: {"tool": "update_product",<br/>"parameters": {"id": "iPhone18", "price": 666}}
+    LLM-->>BFF: Tool invocation result
+    
+    Note over BFF: Handle update commands flow
+    BFF->>BFF: Detect llmResult.tool === 'update_product'
+    
+    Note over BFF: Initial attempt (will fail for product names)
+    BFF->>MCP: callMCP(update_product, {id: "iPhone18", price: 666})
+    
+    Note over MCP: Authentication & JSON-RPC call
+    MCP->>GCP: execSync('gcloud auth print-identity-token')
+    GCP-->>MCP: Bearer token
+    MCP->>Server: POST /mcp<br/>{"method": "tools/call", "params": {<br/>"name": "update_product", "arguments": {"id": "iPhone18", "price": 666}}}
+    
+    Note over Server: UUID validation fails
+    Server->>DB: No product found with ID "iPhone18"
+    Server-->>MCP: {"result": {"response": "datastore: no such entity"}}
+    MCP-->>BFF: Error response
+    
+    Note over BFF: Smart UUID resolution flow
+    BFF->>BFF: Detect update_product command needs resolution
+    BFF->>MCP: callMCP(list_products, {}) - Get all products
+    
+    MCP->>Server: POST /mcp<br/>{"method": "tools/call", "params": {"name": "list_products"}}
+    Server->>DB: SELECT * FROM products
+    DB-->>Server: All product records
+    Server-->>MCP: {"result": [{"id": "uuid1", "name": "iPhone18", "price": 399}, ...]}
+    MCP-->>BFF: Complete product list
+    
+    Note over BFF: Product name matching
+    BFF->>BFF: Find product where name.toLowerCase() === "iphone18"
+    BFF->>BFF: matchingProduct = {id: "806403a6-...", name: "iPhone18", price: 399}
+    
+    Note over BFF: Execute update with resolved UUID
+    BFF->>MCP: callMCP(update_product, {<br/>id: "806403a6-c2c1-439c-8d9f-7d254cbf9b1b",<br/>price: 666})
+    
+    MCP->>Server: POST /mcp<br/>{"method": "tools/call", "params": {<br/>"name": "update_product", "arguments": {<br/>"id": "806403a6-c2c1-439c-8d9f-7d254cbf9b1b", "price": 666}}}
+    
+    Server->>DB: UPDATE products SET price = 666<br/>WHERE id = '806403a6-...'
+    DB-->>Server: Update successful
+    Server-->>MCP: {"result": {"success": true, "updated": {...}}}
+    MCP-->>BFF: Success response
+    
+    Note over BFF: Enhanced response formatting
+    BFF->>BFF: Create enhanced response:<br/>{success: true, message: "Successfully updated 'iPhone18' price to 666",<br/>productName: "iPhone18", oldPrice: 399, newPrice: 666}
+    
+    BFF-->>Frontend: {"result": {"success": true, "message": "...", "updatedProduct": {...}}}
+    
+    Note over Frontend: Display success feedback
+    Frontend->>Frontend: Show success message with<br/>old price → new price transition
+    Frontend->>User: "✅ Successfully updated 'iPhone18' price<br/>from 399 to 666"
+    
+    Note over User,DB: Complete update flow: ~300-800ms
+```
+
+### Update Flow Breakdown
+
+**1. LLM-First Natural Language Processing**
+- User provides command in any natural format: "Update iPhone18 price to 666"
+- LLM intelligently parses intent and extracts: `tool: "update_product"`, `parameters: {id: "iPhone18", price: 666}`
+- **No regex patterns** - pure LLM intelligence for command understanding
+
+**2. Smart UUID Resolution**
+- Initial attempt fails because "iPhone18" is a product name, not a UUID
+- System automatically fetches all products via `list_products`
+- Performs intelligent name matching (case-insensitive, exact + partial)
+- Resolves product name → UUID: "iPhone18" → "806403a6-c2c1-439c-8d9f-7d254cbf9b1b"
+
+**3. Successful Update Execution**
+- Calls `update_product` with resolved UUID and new price
+- Database update executed with proper entity identification
+- Returns enhanced response with old price, new price, and success confirmation
+
+**4. Enhanced User Feedback**
+- Shows clear before/after price comparison
+- Confirms which product was updated by name
+- Provides detailed success messaging
+
+### LLM-First Approach Benefits
+
+- **Natural Language Flexibility**: Works with "Update iPhone18 price to 666", "Update the price of iPhone18 to 666", "Set iPhone18 to $666"
+- **No Regex Dependency**: Eliminates brittle pattern matching - LLM handles all command variations
+- **Smart Error Recovery**: Automatic UUID resolution when product names are provided
+- **Enhanced UX**: Detailed feedback with price transitions and product confirmations
+- **Robust Matching**: Handles exact name matches, partial matches, and case-insensitive matching
 
 ## Local Setup
 
