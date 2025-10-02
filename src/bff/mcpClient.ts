@@ -8,14 +8,40 @@ export async function debugPrintAllProducts(): Promise<void> {
     params: { name: "list_products", arguments: {} }
   };
   try {
-    const response = await axios.post(MCP_SERVER_URL, rpcPayload, config);
-    const products = response.data?.result?.result || [];
+    const response = await axiosInstance.post(MCP_SERVER_URL, rpcPayload, config);
+    const products = response.data?.result || [];
     console.log("[debugPrintAllProducts] Product list:");
     for (const p of products) {
-      console.log(`ID: ${p.id}, Name: '${p.name}'`);
+      console.log(`ID: ${p.id}, Name: '${p.name}', Category: '${p.category}', Segment: '${p.segment}'`);
     }
   } catch (err) {
     console.error("Failed to fetch product list from MCP:", err);
+  }
+}
+
+// Debug utility: Test category query directly
+export async function debugTestCategoryQuery(category: string): Promise<any> {
+  const config = getAuthConfig();
+  const rpcPayload = {
+    jsonrpc: "2.0",
+    id: Date.now(),
+    method: "tools/call",
+    params: { 
+      name: "get_products_by_category", 
+      arguments: { category } 
+    }
+  };
+  try {
+    console.log(`[debugTestCategoryQuery] Testing category: "${category}"`);
+    const response = await axiosInstance.post(MCP_SERVER_URL, rpcPayload, config);
+    const result = response.data;
+    const products = result?.result || [];
+    console.log(`[debugTestCategoryQuery] Response for category "${category}":`, JSON.stringify(result, null, 2));
+    console.log(`[debugTestCategoryQuery] Found ${Array.isArray(products) ? products.length : 0} products`);
+    return result;
+  } catch (err) {
+    console.error(`[debugTestCategoryQuery] Failed to fetch products for category "${category}":`, err);
+    throw err;
   }
 }
 // Utility to fetch product by name
@@ -38,6 +64,24 @@ async function fetchProductIdByName(productName: string, config: any): Promise<s
 // src/bff/mcpClient.ts
 // Client to communicate with remote MCP server
 import axios from 'axios';
+import { Agent } from 'https';
+
+// Create HTTP agent with keep-alive for connection reuse
+const httpAgent = new Agent({
+  keepAlive: true,
+  maxSockets: 10,
+  timeout: 30000
+});
+
+// Configure axios with optimized settings
+const axiosInstance = axios.create({
+  timeout: 30000,
+  httpsAgent: httpAgent,
+  headers: {
+    'Connection': 'keep-alive',
+    'Keep-Alive': 'timeout=30, max=100'
+  }
+});
 
 
 
@@ -45,13 +89,26 @@ const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'https://ravi-mcp-server-25
 
 import { execSync } from 'child_process';
 
+// Cache auth token to avoid repeated gcloud calls
+let cachedAuthConfig: { headers?: { [key: string]: string } } | undefined = undefined;
+let tokenExpiry: number = 0;
+
 // Authentication for different deployment environments
 function getAuthConfig(): { headers?: { [key: string]: string } } | undefined {
+  const now = Date.now();
+  
+  // Return cached token if still valid (tokens typically last 1 hour)
+  if (cachedAuthConfig && now < tokenExpiry) {
+    return cachedAuthConfig;
+  }
+  
   // For local development with gcloud CLI
   if (process.env.NODE_ENV !== 'production') {
     try {
       const token = execSync('gcloud auth print-identity-token', { encoding: 'utf-8' }).trim();
-      return { headers: { Authorization: `Bearer ${token}` } };
+      cachedAuthConfig = { headers: { Authorization: `Bearer ${token}` } };
+      tokenExpiry = now + (55 * 60 * 1000); // Cache for 55 minutes
+      return cachedAuthConfig;
     } catch (err) {
       console.warn('Local gcloud auth failed, trying without authentication:', err);
     }
@@ -61,39 +118,22 @@ function getAuthConfig(): { headers?: { [key: string]: string } } | undefined {
   // Check if MCP server requires authentication
   const authToken = process.env.MCP_AUTH_TOKEN;
   if (authToken) {
-    return { headers: { Authorization: `Bearer ${authToken}` } };
+    cachedAuthConfig = { headers: { Authorization: `Bearer ${authToken}` } };
+    tokenExpiry = now + (55 * 60 * 1000); // Cache for 55 minutes
+    return cachedAuthConfig;
   }
   
   // Try without authentication (if MCP server allows it)
   console.log('Using no authentication for MCP server');
+  cachedAuthConfig = undefined;
   return undefined;
 }
 
 export async function callMCP(toolInvocation: any): Promise<any> {
   try {
     const config = getAuthConfig();
-    // Debug: Print product list for update operations (limit to first 20)
-    if (["update_product", "update_products"].includes(toolInvocation.tool)) {
-      const rpcPayloadList = {
-        jsonrpc: "2.0",
-        id: Date.now(),
-        method: "tools/call",
-        params: { name: "list_products", arguments: {} }
-      };
-      try {
-        const response = await axios.post(MCP_SERVER_URL, rpcPayloadList, config);
-        const products = response.data?.result?.result || [];
-        console.log(`[debugPrintAllProducts] Showing up to 20 products:`);
-        for (const p of products.slice(0, 20)) {
-          console.log(`ID: ${p.id}, Name: '${p.name}'`);
-        }
-        if (products.length > 20) {
-          console.log(`...and ${products.length - 20} more products.`);
-        }
-      } catch (err) {
-        console.error("Failed to fetch product list from MCP:", err);
-      }
-    }
+    // Removed debug product list fetch to improve performance
+    // Only log when explicitly needed for debugging
     // Special handling for each tool based on mcp-server-apis.json
     const rpcId = toolInvocation.id !== undefined ? toolInvocation.id : Date.now();
     let rpcPayload;
@@ -234,7 +274,7 @@ export async function callMCP(toolInvocation: any): Promise<any> {
         throw new Error(`Unsupported tool: ${toolInvocation.tool}`);
     }
     console.log("Sending to MCP:", JSON.stringify(rpcPayload, null, 2));
-    const response = await axios.post(MCP_SERVER_URL, rpcPayload, config);
+    const response = await axiosInstance.post(MCP_SERVER_URL, rpcPayload, config);
     return response.data;
   } catch (err) {
     throw new Error('MCP call failed: ' + (err as any).message);

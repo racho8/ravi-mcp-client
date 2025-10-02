@@ -107,13 +107,13 @@
             margin: 32px 0;
             position: relative;
             overflow: visible;
-            min-height: 700px;
+            min-height: 960px;
         }
         
         .diagram-container {
             position: relative;
             width: 100%;
-            height: 600px;
+            height: 880px;
         }
         
         .component {
@@ -140,48 +140,76 @@
             z-index: 10;
         }
         
-        /* Component positioning with proper gaps */
+        /* Component positioning - Clean top-to-bottom flow with increased spacing */
         .user { 
-            top: 100px; 
-            left: 50px; 
+            top: 50px; 
+            left: 120px; 
             background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); 
             border-color: #f59e0b; 
         }
         .frontend { 
-            top: 100px; 
-            left: 300px; 
+            top: 50px; 
+            left: 420px; 
             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); 
             border-color: #3b82f6; 
         }
         .bff { 
-            top: 280px; 
-            left: 175px; 
+            top: 220px; 
+            left: 270px; 
             background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); 
             border-color: #10b981; 
         }
         .llm { 
-            top: 180px; 
-            left: 550px; 
+            top: 220px; 
+            left: 30px; 
             background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); 
             border-color: #7c3aed; 
         }
         .mcp-client { 
-            top: 380px; 
-            left: 400px; 
+            top: 220px;
+            left: 520px; 
             background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); 
             border-color: #059669; 
         }
+        
+        /* Google Cloud Container */
+        .google-cloud-container {
+            position: absolute;
+            top: 420px;
+            left: 400px;
+            width: 340px;
+            height: 380px;
+            background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
+            border: 3px solid #0288d1;
+            border-radius: 20px;
+            z-index: 0;
+        }
+        
+        .cloud-label {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #01579b;
+            padding: 0;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+        }
+        
         .mcp-server { 
-            top: 460px; 
-            left: 650px; 
+            top: 470px; 
+            left: 490px; 
             background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); 
-            border-color: #ea580c; 
+            border-color: #ea580c;
+            z-index: 2;
         }
         .database { 
-            top: 100px; 
-            left: 800px; 
+            top: 640px; 
+            left: 490px; 
             background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); 
-            border-color: #ec4899; 
+            border-color: #ec4899;
+            z-index: 2;
         }
         
         .component-icon {
@@ -323,17 +351,27 @@
         
         @media (max-width: 768px) {
             .diagram-container {
-                height: 800px;
+                height: 1140px;
             }
             
-            /* Reorganize components for mobile - vertical layout */
-            .user { top: 20px; left: 50%; transform: translateX(-50%); }
-            .frontend { top: 120px; left: 50%; transform: translateX(-50%); }
-            .bff { top: 220px; left: 50%; transform: translateX(-50%); }
-            .llm { top: 320px; left: 25%; transform: translateX(-50%); }
-            .mcp-client { top: 320px; left: 75%; transform: translateX(-50%); }
-            .mcp-server { top: 420px; left: 50%; transform: translateX(-50%); }
-            .database { top: 520px; left: 50%; transform: translateX(-50%); }
+            /* Mobile - clean vertical flow with increased spacing */
+            .user { top: 40px; left: 50%; transform: translateX(-50%); }
+            .frontend { top: 200px; left: 50%; transform: translateX(-50%); }
+            .bff { top: 360px; left: 50%; transform: translateX(-50%); }
+            .llm { top: 520px; left: 25%; transform: translateX(-50%); }
+            .mcp-client { top: 520px; left: 75%; transform: translateX(-50%); }
+            
+            /* Google Cloud container for mobile */
+            .google-cloud-container {
+                top: 680px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 340px;
+                height: 400px;
+            }
+            
+            .mcp-server { top: 730px; left: 50%; transform: translateX(-50%); }
+            .database { top: 900px; left: 50%; transform: translateX(-50%); }
             
             .connections-svg {
                 display: none; /* Hide complex arrows on mobile */
@@ -343,7 +381,7 @@
                 position: relative;
                 top: auto;
                 right: auto;
-                margin: 20px auto;
+                margin: 30px auto;
                 width: fit-content;
             }
             
@@ -381,6 +419,21 @@
         </div>
         
         <div class="content">
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 24px; border-radius: 16px; margin-bottom: 32px; border: 1px solid #e2e8f0;">
+                <h2 style="color: #1e293b; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-info-circle" style="color: #4f46e5;"></i>
+                    System Overview
+                </h2>
+                <p style="color: #475569; line-height: 1.6; margin-bottom: 12px;">
+                    This AI-powered Product Management System features advanced LangChain integration with enhanced 
+                    error handling, welcome message processing, and comprehensive tool display capabilities.
+                </p>
+                <p style="color: #475569; line-height: 1.6;">
+                    The architecture follows a BFF (Backend for Frontend) pattern with modern TypeScript development, 
+                    deployed on Google Cloud Run with comprehensive error handling and logging.
+                </p>
+            </div>
+            
             <div class="architecture-diagram">
                 <div class="diagram-container">
                     <!-- SVG for connection arrows -->
@@ -392,31 +445,31 @@
                             </marker>
                         </defs>
                         
-                        <!-- User to Frontend -->
-                        <path d="M 210 160 L 300 160" class="arrow request" />
+                        <!-- User to Frontend - clean horizontal line -->
+                        <path d="M 280 110 L 420 110" class="arrow request" />
                         
-                        <!-- Frontend to BFF -->
-                        <path d="M 360 220 Q 320 260 255 280" class="arrow request" />
+                        <!-- Frontend to BFF - curved path avoiding overlap -->
+                        <path d="M 500 170 Q 380 190 350 220" class="arrow request" />
                         
-                        <!-- BFF to LLM -->
-                        <path d="M 335 340 Q 440 300 550 240" class="arrow request" />
+                        <!-- BFF to LLM - horizontal left -->
+                        <path d="M 270 280 L 190 280" class="arrow request" />
                         
-                        <!-- BFF to MCP Client -->
-                        <path d="M 255 400 Q 320 440 400 440" class="arrow request" />
+                        <!-- BFF to MCP Client - horizontal right with gap -->
+                        <path d="M 430 280 L 520 280" class="arrow request" />
                         
-                        <!-- MCP Client to MCP Server -->
-                        <path d="M 560 500 L 650 520" class="arrow data" />
+                        <!-- MCP Client to MCP Server - vertical with offset to avoid Google Cloud border -->
+                        <path d="M 600 340 Q 620 380 580 470" class="arrow data" />
                         
-                        <!-- MCP Server to Database -->
-                        <path d="M 730 460 Q 820 350 880 160" class="arrow data" />
+                        <!-- MCP Server to Database - clean vertical inside Google Cloud -->
+                        <path d="M 570 590 L 570 640" class="arrow data" />
                         
-                        <!-- Response flows (dashed) -->
-                        <path d="M 870 170 Q 810 360 720 470" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 650 530 L 570 510" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 400 450 Q 330 450 265 410" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 550 250 Q 450 310 345 350" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 245 290 Q 310 270 350 230" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 300 170 L 220 170" class="arrow response" stroke-dasharray="5,5" />
+                        <!-- Response flows (dashed) - mirror paths with offsets -->
+                        <path d="M 570 640 L 570 590" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 580 470 Q 620 380 600 340" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 520 280 L 430 280" class="arrow response" stroke-dasharray="5,5" stroke-dashoffset="10" />
+                        <path d="M 190 280 L 270 280" class="arrow response" stroke-dasharray="5,5" stroke-dashoffset="10" />
+                        <path d="M 350 220 Q 380 190 500 170" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 420 110 L 280 110" class="arrow response" stroke-dasharray="5,5" stroke-dashoffset="10" />
                     </svg>
                     
                     <!-- Flow legend -->
@@ -432,6 +485,13 @@
                         <div class="legend-item">
                             <div class="legend-line data"></div>
                             <span>Data Access</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Google Cloud Container -->
+                    <div class="google-cloud-container">
+                        <div class="cloud-label">
+                            <i class="fab fa-google-play"></i> Google Cloud
                         </div>
                     </div>
                     
@@ -486,23 +546,17 @@
                     <div class="tech-category">
                         <h4><i class="fas fa-code" style="color: #3b82f6;"></i> Frontend</h4>
                         <ul class="tech-list">
-                            <li>HTML5 & CSS3</li>
-                            <li>Modern JavaScript ES6+</li>
-                            <li>CSS Grid & Flexbox</li>
-                            <li>Font Awesome Icons</li>
-                            <li>Google Fonts (Inter)</li>
+                            <li>HTML5, CSS3, JavaScript</li>
                             <li>Responsive Design</li>
+                            <li>Font Awesome Icons</li>
                         </ul>
                     </div>
                     
                     <div class="tech-category">
                         <h4><i class="fas fa-server" style="color: #10b981;"></i> Backend</h4>
                         <ul class="tech-list">
-                            <li>Node.js 18+</li>
-                            <li>Express.js</li>
+                            <li>Node.js & Express</li>
                             <li>TypeScript</li>
-                            <li>Axios HTTP Client</li>
-                            <li>ES Modules</li>
                             <li>JSON-RPC Protocol</li>
                         </ul>
                     </div>
@@ -511,10 +565,8 @@
                         <h4><i class="fas fa-brain" style="color: #7c3aed;"></i> AI & ML</h4>
                         <ul class="tech-list">
                             <li>Ollama LLM</li>
-                            <li>Natural Language Processing</li>
-                            <li>Intent Recognition</li>
+                            <li>LangChain</li>
                             <li>Model Context Protocol</li>
-                            <li>Smart Tool Selection</li>
                         </ul>
                     </div>
                     
@@ -522,11 +574,8 @@
                         <h4><i class="fas fa-cloud" style="color: #f59e0b;"></i> Deployment</h4>
                         <ul class="tech-list">
                             <li>Google Cloud Run</li>
-                            <li>GCP Authentication</li>
-                            <li>Docker Containers</li>
-                            <li>REST APIs</li>
-                            <li>HTTPS/TLS</li>
-                            <li>Environment Variables</li>
+                            <li>Docker</li>
+                            <li>Git (v1.1)</li>
                         </ul>
                     </div>
                     
@@ -576,6 +625,29 @@
                     </div>
                     <div style="color: #1e40af; font-size: 14px;">
                         <i class="fas fa-mobile-alt"></i> Mobile Responsive
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 1px solid #10b981; border-radius: 16px; padding: 24px; margin: 32px 0;">
+                <h3 style="color: #047857; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-rocket"></i> Recent Improvements (v1.1)
+                </h3>
+                <div style="color: #065f46; line-height: 1.6;">
+                    <div style="margin-bottom: 12px;">
+                        <strong>🎨 Enhanced Frontend:</strong> Improved response formatting with welcome message handling and tool display capabilities
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <strong>🧠 LangChain Integration:</strong> Upgraded to LangChain v0.3.34 with @langchain/ollama v0.2.4 for better AI processing
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <strong>🔧 Robust Error Handling:</strong> Enhanced error management and logging throughout the system
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <strong>📦 Tag-based Deployment:</strong> Stable release management with Git tag-based versioning
+                    </div>
+                    <div>
+                        <strong>🔄 Advanced Product Management:</strong> Improved duplicate detection and cleanup with smart recommendations
                     </div>
                 </div>
             </div>

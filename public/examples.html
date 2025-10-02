@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Examples - Product Management AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #4f46e5;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #64748b;
+            font-size: 18px;
+        }
+        
+        .back-button {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+        
+        .back-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            color: #4f46e5;
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .section h3 {
+            color: #64748b;
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+        }
+        
+        .command-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            color: #1e293b;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .command-box:hover {
+            background: #4f46e5;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .command-box::before {
+            content: '💬';
+            margin-right: 10px;
+        }
+        
+        .command-box:hover::after {
+            content: ' (click to copy)';
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .highlight-box h4 {
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        
+        .highlight-box p {
+            color: #475569;
+            line-height: 1.6;
+        }
+        
+        .tip-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .tip-box strong {
+            color: #92400e;
+        }
+        
+        ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+        
+        ul li {
+            margin: 8px 0;
+            color: #475569;
+        }
+        
+        ul li::before {
+            content: '→';
+            color: #4f46e5;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .toast.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-button"><i class="fas fa-arrow-left"></i> Back to Chat</a>
+        
+        <div class="header">
+            <h1><i class="fas fa-book-open"></i> Command Examples</h1>
+            <p>Click any command to copy it to clipboard</p>
+        </div>
+        
+        <div class="section">
+            <h2><i class="fas fa-plus-circle"></i> Create Multiple Products</h2>
+            
+            <h3>Basic Format</h3>
+            <div class="command-box">Add Chair 150, Desk 300, and Lamp 50 in Furniture category</div>
+            <div class="command-box">Create products: Mouse at 80, Keyboard at 120, Monitor at 350 in Electronics</div>
+            
+            <h3>With Segments</h3>
+            <div class="command-box">Add Dell XPS 1200, HP Spectre 1100, Lenovo Yoga 900 in Electronics with Laptops segment</div>
+            <div class="command-box">Create iPhone 14 799, iPhone 15 999, iPhone 16 1199 in Electronics with mobiles segment</div>
+            
+            <h3>Office Furniture Set</h3>
+            <div class="command-box">Create Office Desk 400, Office Chair 200, Monitor Stand 100, Desk Lamp 45 in Office furniture</div>
+            
+            <div class="highlight-box">
+                <h4><i class="fas fa-lightbulb"></i> How it works</h4>
+                <p>The system understands various formats for creating multiple products. Just list the products with their prices and specify the category. Optionally add segment information for better organization.</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><i class="fas fa-plus"></i> Create Single Product</h2>
+            <div class="command-box">Create product iPad Air in Electronics for 599</div>
+            <div class="command-box">Add new product Office Chair in Furniture category priced at 250</div>
+            <div class="command-box">Create Gaming Mouse in Electronics category for 80</div>
+        </div>
+        
+        <div class="section">
+            <h2><i class="fas fa-search"></i> Query Products</h2>
+            
+            <h3>List All</h3>
+            <div class="command-box">Show all products</div>
+            <div class="command-box">List all products</div>
+            
+            <h3>Filter by Category</h3>
+            <div class="command-box">Show me all products in Electronics category</div>
+            <div class="command-box">Show me Furniture</div>
+            
+            <h3>Filter by Segment</h3>
+            <div class="command-box">Show me Laptops</div>
+            <div class="command-box">Find mobiles</div>
+            
+            <h3>Search by Name</h3>
+            <div class="command-box">Find iPhone</div>
+            <div class="command-box">Show me MacBook products</div>
+            
+            <h3>Count Products</h3>
+            <div class="command-box">How many products are there?</div>
+            <div class="command-box">Count products in Electronics category</div>
+        </div>
+        
+        <div class="section">
+            <h2><i class="fas fa-edit"></i> Update Products</h2>
+            
+            <h3>Update Single Product</h3>
+            <div class="command-box">Update iPhone 17 price to 799</div>
+            <div class="command-box">Change Laptop1 price to 1200</div>
+            <div class="command-box">Set MacBook Pro price to 2999</div>
+            
+            <h3>Bulk Update</h3>
+            <div class="command-box">Update all MacBook products to price 2800</div>
+            <div class="command-box">Update price of all home office products to 400</div>
+            <div class="command-box">Change all iPhone prices to 900</div>
+            <div class="command-box">Set all Laptop1 prices to 1500</div>
+            <div class="command-box">Update every product in Furniture category to 500</div>
+            
+            <div class="highlight-box">
+                <h4><i class="fas fa-lightbulb"></i> How Bulk Update Works</h4>
+                <p>Use keywords like "all", "every", or "entire" to update multiple products at once. The system will find all matching products and update their prices in a single operation.</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><i class="fas fa-trash-alt"></i> Delete Products</h2>
+            
+            <h3>Delete Single Product</h3>
+            <div class="command-box">Delete Acer Laptop</div>
+            <div class="command-box">Remove iPhone 15</div>
+            <div class="command-box">Erase product MacBook Pro</div>
+            
+            <h3>Bulk Delete (Multiple Products)</h3>
+            <div class="command-box">Delete all MacBook products</div>
+            <div class="command-box">Remove all laptops in Electronics category</div>
+            <div class="command-box">Delete all home office products</div>
+            <div class="command-box">Erase all iPhone models</div>
+            <div class="command-box">Remove all products in Laptops segment</div>
+            
+            <div class="highlight-box">
+                <h4><i class="fas fa-lightbulb"></i> How Bulk Delete Works</h4>
+                <p>Use keywords like "all", "every", or "entire" to delete multiple products at once. The system will find all matching products by name pattern, category, or segment and delete them in a single operation.</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2><i class="fas fa-copy"></i> Duplicate Management</h2>
+            <div class="command-box">Show me duplicate products</div>
+            <div class="command-box">Clean up duplicate products</div>
+            <div class="command-box">Remove duplicate products</div>
+        </div>
+        
+        <div class="tip-box">
+            <strong><i class="fas fa-info-circle"></i> Pro Tips:</strong>
+            <ul>
+                <li>Be specific with product names and prices</li>
+                <li>Always include category for new products</li>
+                <li>Use consistent category names (e.g., "Electronics" not "electronic")</li>
+                <li>For multiple products, separate with commas or "and"</li>
+                <li>You can use natural language - the system understands various phrasings</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i> Command copied to clipboard!
+    </div>
+    
+    <script>
+        // Copy command to clipboard on click
+        document.querySelectorAll('.command-box').forEach(box => {
+            box.addEventListener('click', function() {
+                const text = this.textContent.replace('💬 ', '').replace(' (click to copy)', '').trim();
+                navigator.clipboard.writeText(text).then(() => {
+                    // Show toast
+                    const toast = document.getElementById('toast');
+                    toast.classList.add('show');
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

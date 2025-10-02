@@ -82,6 +82,13 @@ EXAMPLE MAPPINGS:
 - "Update all MacBook products to price 2800" → {"tool": "list_products", "parameters": {}}
 - "Set all Laptop1 prices to 1500" → {"tool": "list_products", "parameters": {}}
 - "Change all iPhone prices to 900" → {"tool": "list_products", "parameters": {}}
+- "Delete Acer Laptop" → {"tool": "list_products", "parameters": {}}
+- "Remove iPhone 15 Pro" → {"tool": "list_products", "parameters": {}}
+- "Erase MacBook Air" → {"tool": "list_products", "parameters": {}}
+- "Delete all MacBook products" → {"tool": "list_products", "parameters": {}}
+- "Remove all laptops in Electronics" → {"tool": "list_products", "parameters": {}}
+- "Delete all home office products" → {"tool": "list_products", "parameters": {}}
+- "Erase all iPhone models" → {"tool": "list_products", "parameters": {}}
 
 UPDATE COMMAND PROCESSING:
 The route handler will detect update intent from commands containing:
@@ -89,6 +96,35 @@ The route handler will detect update intent from commands containing:
 - Extract product name patterns and new price values
 - Match products from list_products result
 - Call update_product or update_products with actual UUIDs
+
+DELETE COMMAND PROCESSING:
+For delete commands, the route handler resolves product names to UUIDs:
+- "delete", "remove", "erase" + product name
+- Extract product name from command
+- Match products from list_products result
+- Call delete_product or delete_products with actual UUIDs
+- Examples:
+  - "Delete Acer Laptop" → {"tool": "list_products", "parameters": {}}
+  - "Remove iPhone 15 Pro" → {"tool": "list_products", "parameters": {}}
+  - "Delete all MacBook products" → {"tool": "list_products", "parameters": {}}
+  - "Remove all laptops in Electronics" → {"tool": "list_products", "parameters": {}}
+  - "Erase all home office products" → {"tool": "list_products", "parameters": {}}
+
+BULK OPERATIONS RULES:
+- BULK UPDATE: Commands with "all", "every", "entire" + update action
+  - "Update all MacBook prices to 2500" → use list_products (handler calls update_products)
+  - "Change every iPhone price to 999" → use list_products (handler calls update_products)
+  - "Set all home office product prices to 400" → use list_products (handler calls update_products)
+  
+- BULK DELETE: Commands with "all", "every", "entire" + delete action
+  - "Delete all MacBook products" → use list_products (handler calls delete_products)
+  - "Remove all duplicate products" → use list_products (handler identifies and deletes)
+  - "Erase all laptops in Electronics" → use list_products (handler filters and deletes)
+
+- SINGLE OPERATIONS: Specific product name without "all"
+  - "Update iPhone 15 price to 899" → use list_products (handler calls update_product)
+  - "Delete Acer Laptop" → use list_products (handler calls delete_product)
+
 - "Show me duplicate products" → {"tool": "list_products", "parameters": {}}
 - "Identify duplicates" → {"tool": "list_products", "parameters": {}}
 - "Clean up duplicate products" → {"tool": "list_products", "parameters": {}}
@@ -105,10 +141,17 @@ DUPLICATE MANAGEMENT RULES:
 - If command contains "duplicate" or "duplicates" → use list_products (processed by route handler)
 - "find duplicates", "show duplicates", "identify duplicates" → analyze for duplicates
 - "clean duplicates", "remove duplicates", "cleanup duplicates" → delete duplicate products
+- "delete all duplicates" → use list_products (handler identifies and deletes)
 
 BULK UPDATE RULES:
-- If command contains "all" or "every" → use update_products
-- For single specific product → use update_product
+- If command contains "all", "every", "entire" + update keywords → bulk update
+- For single specific product → use update_product (via list_products for name resolution)
+- Update keywords: "update", "change", "set", "modify" + "price"
+
+BULK DELETE RULES:
+- If command contains "all", "every", "entire" + delete keywords → bulk delete
+- For single specific product → use delete_product (via list_products for name resolution)
+- Delete keywords: "delete", "remove", "erase", "cleanup"
 
 COUNTING RULES:
 - If command contains "how many", "count", "number of" → will be processed for counting

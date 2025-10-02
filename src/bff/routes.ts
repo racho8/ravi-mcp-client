@@ -65,26 +65,115 @@ function recommendDuplicateCleanup(duplicates: Record<string, any[]>): any {
   };
 }
 
+// Simple response cache for common queries
+const responseCache = new Map<string, { response: any; timestamp: number }>();
+const CACHE_DURATION = 30 * 1000; // 30 seconds cache
+
+// Cache invalidation helper
+function invalidateProductCache(reason: string) {
+  let invalidatedCount = 0;
+  const keysToDelete: string[] = [];
+  
+  for (const [key] of responseCache) {
+    // Match any query that involves products
+    if (key.includes('product') || 
+        key.includes('show all') || 
+        key.includes('list all') ||
+        key.includes('get all') ||
+        key.match(/^(show|list|get)\s+(all\s+)?products?\s*$/)) {
+      keysToDelete.push(key);
+    }
+  }
+  
+  keysToDelete.forEach(key => {
+    responseCache.delete(key);
+    invalidatedCount++;
+  });
+  
+  console.log(`[Cache Invalidation] ${reason} - Cleared ${invalidatedCount} cached queries: [${keysToDelete.join(', ')}]`);
+}
+
+// Helper to check if a tool is a mutation operation
+function isMutationOperation(toolName: string): boolean {
+  const mutationTools = [
+    'create_product', 
+    'update_product', 
+    'delete_product',
+    'create_multiple_products',
+    'update_products', 
+    'delete_products'
+  ];
+  return mutationTools.includes(toolName);
+}
+
 // Handles POST /api/command
 export async function processNaturalLanguageCommand(req: Request, res: Response) {
   const { command } = req.body;
   if (!command) {
     return res.status(400).json({ error: 'Missing command' });
   }
+  
+  // Check cache for simple, common queries
+  const normalizedCommand = command.toLowerCase().trim();
+  const cacheKey = normalizedCommand;
+  const cached = responseCache.get(cacheKey);
+  
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+    console.log(`[Cache Hit] Returning cached response for: "${command}"`);
+    return res.json(cached.response);
+  }
+  
   try {
-    // 1. Use LLM to parse intent/tool call
-    const llmResult = await callLLM(command);
+    // 1. Fast pattern recognition for common commands (skip LLM if possible)
+    let llmResult;
+    
+    if (normalizedCommand.match(/^(show|list|get)\s+(all\s+)?products?\s*$/)) {
+      console.log(`[Pattern Match] Recognized simple product list query - skipping LLM`);
+      llmResult = { tool: 'list_products', parameters: {} };
+    } else if (normalizedCommand.match(/^(show|list|get)\s+.*products?\s+in\s+(\w+)\s+category$/)) {
+      const categoryMatch = normalizedCommand.match(/in\s+(\w+)\s+category$/);
+      const category = categoryMatch ? categoryMatch[1] : '';
+      console.log(`[Pattern Match] Recognized category query for: ${category}`);
+      llmResult = { tool: 'get_products_by_category', parameters: { category } };
+    } else {
+      // 1.1. Use LLM to parse intent/tool call for complex queries
+      llmResult = await callLLM(command);
+    }
+    
     console.log(`[Route] LLM Result:`, JSON.stringify(llmResult, null, 2));
     
     // 2. Use MCP client to invoke tool
     let mcpResult = await callMCP(llmResult);
     console.log(`[Route] Initial MCP Result:`, JSON.stringify(mcpResult, null, 2));
     
-    // 3. Check if this is a counting query and modify response accordingly
+    // 2.1. Debug logging for category/segment queries
+    if (llmResult.tool === 'get_products_by_category' || llmResult.tool === 'get_products_by_segment') {
+      const resultArray = mcpResult.result;
+      const count = Array.isArray(resultArray) ? resultArray.length : 0;
+      console.log(`[Debug] ${llmResult.tool} returned ${count} products`);
+      console.log(`[Debug] Full result type:`, typeof resultArray, `isArray:`, Array.isArray(resultArray));
+      if (count > 0) {
+        console.log(`[Debug] First 3 products:`, resultArray.slice(0, 3).map((p: any) => ({ name: p.name, category: p.category })));
+        if (count > 3) {
+          console.log(`[Debug] ... and ${count - 3} more products`);
+        }
+      }
+    }
+    
+    // 3. Fast path for simple "show all products" - skip complex processing
+    const isSimpleListQuery = command.toLowerCase().match(/^(show|list|get)\s+(all\s+)?products?\s*$/);
+    
+    if (isSimpleListQuery && llmResult.tool === 'list_products' && mcpResult.result && Array.isArray(mcpResult.result)) {
+      console.log(`[Fast Path] Simple product list query - returning results directly`);
+      return res.json({ result: mcpResult });
+    }
+    
+    // 3.1. Check if this is a counting query and modify response accordingly
     const isCountingQuery = command.toLowerCase().includes('how many') || 
                            command.toLowerCase().includes('count') || 
                            command.toLowerCase().includes('number of');
-    
+                           
+    // Early return for counting queries to avoid unnecessary processing
     if (isCountingQuery && mcpResult.result && Array.isArray(mcpResult.result)) {
       console.log(`[Counting Query] Converting result to count`);
       
@@ -117,7 +206,7 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
         context = `${llmResult.parameters.segment} segment`;
       }
       
-      mcpResult = {
+      const countResult = {
         jsonrpc: "2.0",
         id: mcpResult.id,
         result: {
@@ -128,6 +217,7 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       };
       
       console.log(`[Counting Query] Found ${products.length} products in ${context || 'total'}`);
+      return res.json({ result: countResult });
     }
     
     // 3.5. Apply name-based filtering for regular "find" commands (moved after update processing)
@@ -174,6 +264,9 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
               ids: idsToDelete
             }
           });
+          
+          // Invalidate cache after successful deletion
+          invalidateProductCache(`Duplicate cleanup: ${idsToDelete.length} products deleted`);
           
           mcpResult = {
             jsonrpc: "2.0",
@@ -258,6 +351,9 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
               
               // Return enhanced response
               if (updateResult.result) {
+                // Invalidate cache after successful update
+                invalidateProductCache(`Product update: ${matchingProduct.name}`);
+                
                 mcpResult = {
                   jsonrpc: "2.0",
                   id: updateResult.id,
@@ -285,10 +381,194 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
             mcpResult = { error: 'Missing product name or price in update command' };
           }
         } 
-        // Handle bulk updates if needed
+        // Handle bulk updates
         else if (llmResult.tool === 'update_products') {
-          console.log(`[Update Flow] Bulk update not yet implemented in simplified flow`);
-          mcpResult = { error: 'Bulk update not yet implemented' };
+          console.log(`[Update Flow] Processing bulk update`);
+          
+          // Parse the command to extract filter criteria and new price
+          const lowerCommand = command.toLowerCase();
+          let filterCriteria: { segment?: string; category?: string; namePattern?: string } = {};
+          let newPrice: number | undefined;
+          
+          // Extract price from command
+          const priceMatch = command.match(/(?:to|price)\s+(\d+)/i);
+          if (priceMatch) {
+            newPrice = parseInt(priceMatch[1]);
+          }
+          
+          // Detect filter type and value
+          if (lowerCommand.includes('home office') || lowerCommand.includes('homeoffice')) {
+            filterCriteria.segment = 'HomeOffice';
+          } else if (lowerCommand.includes('segment')) {
+            const segmentMatch = command.match(/(\w+)\s+segment/i);
+            if (segmentMatch) filterCriteria.segment = segmentMatch[1];
+          } else if (lowerCommand.includes('category')) {
+            const categoryMatch = command.match(/(\w+)\s+category/i);
+            if (categoryMatch) filterCriteria.category = categoryMatch[1];
+          } else if (lowerCommand.includes('macbook')) {
+            filterCriteria.namePattern = 'macbook';
+          } else if (lowerCommand.includes('iphone')) {
+            filterCriteria.namePattern = 'iphone';
+          } else if (lowerCommand.includes('laptop')) {
+            filterCriteria.namePattern = 'laptop';
+          }
+          
+          if (!newPrice) {
+            console.warn(`[Update Flow] Could not extract price from command: ${command}`);
+            mcpResult = { error: 'Could not determine new price from command' };
+          } else if (Object.keys(filterCriteria).length === 0) {
+            console.warn(`[Update Flow] Could not determine filter criteria from command: ${command}`);
+            mcpResult = { error: 'Could not determine which products to update' };
+          } else {
+            // Filter products based on criteria
+            let productsToUpdate = allProducts.filter((product: any) => {
+              if (filterCriteria.segment) {
+                return product.segment && product.segment.toLowerCase() === filterCriteria.segment.toLowerCase();
+              }
+              if (filterCriteria.category) {
+                return product.category && product.category.toLowerCase() === filterCriteria.category.toLowerCase();
+              }
+              if (filterCriteria.namePattern) {
+                return product.name && product.name.toLowerCase().includes(filterCriteria.namePattern.toLowerCase());
+              }
+              return false;
+            });
+            
+            if (productsToUpdate.length === 0) {
+              console.warn(`[Update Flow] No products matched filter criteria:`, filterCriteria);
+              mcpResult = { 
+                error: `No products found matching criteria: ${JSON.stringify(filterCriteria)}` 
+              };
+            } else {
+              console.log(`[Update Flow] Found ${productsToUpdate.length} products to update with price ${newPrice}`);
+              console.log(`[Update Flow] Products:`, productsToUpdate.map((p: any) => ({ name: p.name, oldPrice: p.price })));
+              
+              // Build products array with updated prices
+              const updatedProducts = productsToUpdate.map((product: any) => ({
+                id: product.id,
+                name: product.name,
+                category: product.category,
+                segment: product.segment,
+                price: newPrice
+              }));
+              
+              // Call update_products with actual UUIDs
+              const updateResult = await callMCP({
+                tool: 'update_products',
+                parameters: {
+                  products: updatedProducts
+                }
+              });
+              
+              // Return enhanced response
+              if (updateResult.result) {
+                // Invalidate cache after successful update
+                invalidateProductCache(`Bulk update: ${productsToUpdate.length} products updated`);
+                
+                mcpResult = {
+                  jsonrpc: "2.0",
+                  id: updateResult.id,
+                  result: {
+                    success: true,
+                    message: `Successfully updated ${productsToUpdate.length} products to price ${newPrice}`,
+                    updatedCount: productsToUpdate.length,
+                    newPrice: newPrice,
+                    updatedProducts: updatedProducts.map((p: any) => ({
+                      name: p.name,
+                      oldPrice: productsToUpdate.find((op: any) => op.id === p.id)?.price,
+                      newPrice: newPrice
+                    }))
+                  }
+                };
+              } else {
+                mcpResult = updateResult;
+              }
+            }
+          }
+        }
+      } else {
+        mcpResult = { error: 'No products found in database' };
+      }
+    }
+    
+    // 5.5. Handle delete commands: resolve product names to UUIDs
+    if (llmResult.tool === 'delete_product' || llmResult.tool === 'delete_products') {
+      console.log(`[Delete Flow] Processing ${llmResult.tool} command`);
+      
+      // Get all products to resolve names to UUIDs
+      const listResult = await callMCP({ tool: 'list_products', parameters: {} });
+      let allProducts = [];
+      if (listResult.result && Array.isArray(listResult.result)) {
+        allProducts = listResult.result;
+      }
+      
+      if (allProducts.length > 0) {
+        if (llmResult.tool === 'delete_product') {
+          // Single product delete
+          const productNameOrId = llmResult.parameters.id;
+          
+          if (productNameOrId) {
+            // Check if this is already a UUID or a product name
+            const looksLikeUUID = productNameOrId.includes('-') && productNameOrId.length > 30;
+            
+            let matchingProduct = null;
+            if (looksLikeUUID) {
+              // Search by UUID
+              matchingProduct = allProducts.find((product: any) => product.id === productNameOrId);
+            } else {
+              // Search by name (case-insensitive exact match first, then contains)
+              matchingProduct = allProducts.find((product: any) => 
+                product.name && product.name.toLowerCase() === productNameOrId.toLowerCase()
+              );
+              if (!matchingProduct) {
+                // Fallback to contains search
+                matchingProduct = allProducts.find((product: any) => 
+                  product.name && product.name.toLowerCase().includes(productNameOrId.toLowerCase())
+                );
+              }
+            }
+            
+            if (matchingProduct) {
+              console.log(`[Delete Flow] Found product: ${matchingProduct.name} (${matchingProduct.id}), deleting...`);
+              
+              // Call delete_product with actual UUID
+              const deleteResult = await callMCP({
+                tool: 'delete_product',
+                parameters: {
+                  id: matchingProduct.id
+                }
+              });
+              
+              // Return enhanced response
+              if (deleteResult.result) {
+                // Invalidate cache after successful delete
+                invalidateProductCache(`Product delete: ${matchingProduct.name}`);
+                
+                mcpResult = {
+                  jsonrpc: "2.0",
+                  id: deleteResult.id,
+                  result: {
+                    success: true,
+                    message: `Successfully deleted '${matchingProduct.name}'`,
+                    productName: matchingProduct.name,
+                    deletedProduct: matchingProduct
+                  }
+                };
+              } else {
+                mcpResult = deleteResult;
+              }
+            } else {
+              console.warn(`[Delete Flow] Could not find product: '${productNameOrId}'`);
+              mcpResult = { error: `Product '${productNameOrId}' not found` };
+            }
+          } else {
+            console.warn(`[Delete Flow] Missing product name/id in parameters:`, llmResult.parameters);
+            mcpResult = { error: 'Missing product name in delete command' };
+          }
+        } else if (llmResult.tool === 'delete_products') {
+          // Bulk delete not implemented yet
+          console.log(`[Delete Flow] Bulk delete not yet implemented`);
+          mcpResult = { error: 'Bulk delete not yet implemented' };
         }
       } else {
         mcpResult = { error: 'No products found in database' };
@@ -413,8 +693,32 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       }
     }
     
-    // 7. Return result
-    res.json({ result: mcpResult });
+    // 7. Handle cache invalidation and caching for responses
+    const finalResponse = { result: mcpResult };
+    
+    // Debug: Log final response for category/segment queries
+    if (llmResult.tool === 'get_products_by_category' || llmResult.tool === 'get_products_by_segment') {
+      const productCount = Array.isArray(mcpResult.result) ? mcpResult.result.length : 'not an array';
+      console.log(`[Debug] Sending final response with ${productCount} products to client`);
+    }
+    
+    // Invalidate cache if this was a mutation operation that succeeded
+    if (isMutationOperation(llmResult.tool) && mcpResult.result && !mcpResult.error) {
+      invalidateProductCache(`${llmResult.tool} operation completed`);
+    }
+    
+    // Cache simple product listing queries (only if not a mutation)
+    if (!isMutationOperation(llmResult.tool) && 
+        normalizedCommand.match(/^(show|list|get)\s+(all\s+)?products?\s*$/)) {
+      responseCache.set(cacheKey, {
+        response: finalResponse,
+        timestamp: Date.now()
+      });
+      console.log(`[Cache Store] Cached response for key: "${cacheKey}" (original: "${command}")`);
+    }
+    
+    // 8. Return result
+    res.json(finalResponse);
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Internal error' });
   }
