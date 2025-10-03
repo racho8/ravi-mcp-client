@@ -183,6 +183,52 @@
         .toast.show {
             display: block;
         }
+        
+        .collapsible {
+            cursor: pointer;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+            width: 100%;
+            text-align: left;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .collapsible:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .collapsible.active {
+            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+        }
+        
+        .collapsible-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .collapsible.active .collapsible-icon {
+            transform: rotate(180deg);
+        }
+        
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 10px;
+        }
+        
+        .collapsible-content.active {
+            max-height: 5000px;
+        }
     </style>
 </head>
 <body>
@@ -195,34 +241,50 @@
         </div>
         
         <div class="section">
-            <h2><i class="fas fa-plus-circle"></i> Create Multiple Products</h2>
+            <button class="collapsible active">
+                <span><i class="fas fa-plus-circle"></i> Create Multiple Products</span>
+                <i class="fas fa-chevron-down collapsible-icon"></i>
+            </button>
+            <div class="collapsible-content active">
             
             <h3>Basic Format</h3>
             <div class="command-box">Add Chair 150, Desk 300, and Lamp 50 in Furniture category</div>
             <div class="command-box">Create products: Mouse at 80, Keyboard at 120, Monitor at 350 in Electronics</div>
             
-            <h3>With Segments</h3>
-            <div class="command-box">Add Dell XPS 1200, HP Spectre 1100, Lenovo Yoga 900 in Electronics with Laptops segment</div>
-            <div class="command-box">Create iPhone 14 799, iPhone 15 999, iPhone 16 1199 in Electronics with mobiles segment</div>
+            <h3>With Category and Segment</h3>
+            <div class="command-box">Add Dell XPS 1200, HP Spectre 1100, Lenovo Yoga 900 in Electronics category and Laptops segment</div>
+            <div class="command-box">Create iPhone 14 799, iPhone 15 999, iPhone 16 1199 in Electronics category and mobiles segment</div>
+            <div class="command-box">Add Wireless Mouse 25, USB Cable 10, Phone Case 15 in Electronics category, Accessories segment</div>
             
             <h3>Office Furniture Set</h3>
-            <div class="command-box">Create Office Desk 400, Office Chair 200, Monitor Stand 100, Desk Lamp 45 in Office furniture</div>
+            <div class="command-box">Create Office Desk 400, Office Chair 200, Monitor Stand 100, Desk Lamp 45 in Office furniture category and HomeOffice segment</div>
             
             <div class="highlight-box">
                 <h4><i class="fas fa-lightbulb"></i> How it works</h4>
-                <p>The system understands various formats for creating multiple products. Just list the products with their prices and specify the category. Optionally add segment information for better organization.</p>
+                <p>The system understands various formats for creating multiple products. Just list the products with their prices and specify the category. Add segment information (e.g., "Laptops", "mobiles", "HomeOffice", "Accessories") for better organization and filtering.</p>
+            </div>
             </div>
         </div>
         
         <div class="section">
-            <h2><i class="fas fa-plus"></i> Create Single Product</h2>
+            <button class="collapsible active">
+                <span><i class="fas fa-plus"></i> Create Single Product</span>
+                <i class="fas fa-chevron-down collapsible-icon"></i>
+            </button>
+            <div class="collapsible-content active">
             <div class="command-box">Create product iPad Air in Electronics for 599</div>
             <div class="command-box">Add new product Office Chair in Furniture category priced at 250</div>
             <div class="command-box">Create Gaming Mouse in Electronics category for 80</div>
+            <div class="command-box">Create Desk Lamp 45 in Office furniture, HomeOffice segment</div>
+            </div>
         </div>
         
         <div class="section">
-            <h2><i class="fas fa-search"></i> Query Products</h2>
+            <button class="collapsible active">
+                <span><i class="fas fa-search"></i> Query Products</span>
+                <i class="fas fa-chevron-down collapsible-icon"></i>
+            </button>
+            <div class="collapsible-content active">
             
             <h3>List All</h3>
             <div class="command-box">Show all products</div>
@@ -243,10 +305,15 @@
             <h3>Count Products</h3>
             <div class="command-box">How many products are there?</div>
             <div class="command-box">Count products in Electronics category</div>
+            </div>
         </div>
         
         <div class="section">
-            <h2><i class="fas fa-edit"></i> Update Products</h2>
+            <button class="collapsible active">
+                <span><i class="fas fa-edit"></i> Update Products</span>
+                <i class="fas fa-chevron-down collapsible-icon"></i>
+            </button>
+            <div class="collapsible-content active">
             
             <h3>Update Single Product</h3>
             <div class="command-box">Update iPhone 17 price to 799</div>
@@ -264,10 +331,15 @@
                 <h4><i class="fas fa-lightbulb"></i> How Bulk Update Works</h4>
                 <p>Use keywords like "all", "every", or "entire" to update multiple products at once. The system will find all matching products and update their prices in a single operation.</p>
             </div>
+            </div>
         </div>
         
         <div class="section">
-            <h2><i class="fas fa-trash-alt"></i> Delete Products</h2>
+            <button class="collapsible active">
+                <span><i class="fas fa-trash-alt"></i> Delete Products</span>
+                <i class="fas fa-chevron-down collapsible-icon"></i>
+            </button>
+            <div class="collapsible-content active">
             
             <h3>Delete Single Product</h3>
             <div class="command-box">Delete Acer Laptop</div>
@@ -285,13 +357,19 @@
                 <h4><i class="fas fa-lightbulb"></i> How Bulk Delete Works</h4>
                 <p>Use keywords like "all", "every", or "entire" to delete multiple products at once. The system will find all matching products by name pattern, category, or segment and delete them in a single operation.</p>
             </div>
+            </div>
         </div>
         
         <div class="section">
-            <h2><i class="fas fa-copy"></i> Duplicate Management</h2>
+            <button class="collapsible active">
+                <span><i class="fas fa-copy"></i> Duplicate Management</span>
+                <i class="fas fa-chevron-down collapsible-icon"></i>
+            </button>
+            <div class="collapsible-content active">
             <div class="command-box">Show me duplicate products</div>
             <div class="command-box">Clean up duplicate products</div>
             <div class="command-box">Remove duplicate products</div>
+            </div>
         </div>
         
         <div class="tip-box">
@@ -323,6 +401,15 @@
                         toast.classList.remove('show');
                     }, 2000);
                 });
+            });
+        });
+        
+        // Collapsible sections functionality
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.classList.toggle('active');
             });
         });
     </script>

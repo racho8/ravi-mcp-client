@@ -8,42 +8,17 @@ export async function callLLM(command: string): Promise<any> {
   const schemas = await fetchAndCacheToolSchemas();
   console.log('[LLM] Available tools:', Object.keys(schemas));
   
-  let toolDefinitions = `You are an assistant that converts user commands into JSON tool invocations for the MCP server.
+  let toolDefinitions = `Convert user commands to JSON tool calls. Handler resolves names to UUIDs.
 
-IMPORTANT RULES:
-- For "show [item]" or "find [item]" or "get [item]" → try to match by name first, then segment, then category
-- For "show products by category" or "products in [category] category" → use get_products_by_category
-- For "show products by segment" or "products in [segment] segment" → use get_products_by_segment  
-- For "find product named [name]" or "get product [name]" → use get_product_by_name
-- For "show all products" or "list products" → use list_products
-- For "show all products grouped by category" → use list_products (not get_products_by_category!)
-- For update commands → use update_product with product name as id and extract the new price
-- For "how many" or "count" queries → use list_products to get all products for counting
-- For creating, updating, deleting → use appropriate tools
+RULES:
+• Query: "show/find/get [X]" → match by name > segment > category
+• Create: Extract name, price, category (optional), segment (optional)
+• Update/Delete: Always use list_products (handler extracts names & resolves UUIDs)
+• Count: use list_products or specific filter tools
+• "all/every" = bulk operation (handler decides update_products vs delete_products)
 
-SMART UPDATE HANDLING:
-- For ANY update command (regardless of format), extract the product name and new price
-- Use update_product with: {"id": "product_name", "price": new_price}
-- The route handler will resolve product names to actual UUIDs
-- Examples:
-  - "Update iPhone18 price to 666" → {"tool": "update_product", "parameters": {"id": "iPhone18", "price": 666}}
-  - "Update the price of iPhone 15 Pro to 299" → {"tool": "update_product", "parameters": {"id": "iPhone 15 Pro", "price": 299}}
-  - "Set MacBook Pro price to 2500" → {"tool": "update_product", "parameters": {"id": "MacBook Pro", "price": 2500}}
-  - "Change Laptop1 price to 1200" → {"tool": "update_product", "parameters": {"id": "Laptop1", "price": 1200}}
-
-COUNTING QUERIES:
-- "How many products are there" → use list_products
-- "How many products in Electronics category" → use get_products_by_category with category="Electronics" 
-- "Count products in Furniture" → use get_products_by_category with category="Furniture"
-- "How many MacBook products" → use list_products (for filtering by name)
-- "Count Laptops" → use get_products_by_segment with segment="Laptops"
-- "How many iPhone models do we have" → use list_products (for filtering by name pattern)
-
-SMART MATCHING LOGIC:
-- "Show me Laptops" could mean segment="Laptops", category="Laptops", or name="Laptops"
-- "Show me Electronics" could mean category="Electronics" or segment="Electronics"
-- "Show me Furniture" could mean category="Furniture" or segment="Furniture"
-- Choose the most logical interpretation based on common product categorization
+MATCHING:
+• Electronics/Furniture/Office furniture = category | Laptops/mobiles/HomeOffice = segment | iPhone/MacBook = name
 
 Available tools:`;
   
@@ -62,108 +37,35 @@ Available tools:`;
   // Add specific examples for filtering
   toolDefinitions += `
 
-EXAMPLE MAPPINGS:
-- "Show me all products from Furniture category" → {"tool": "get_products_by_category", "parameters": {"category": "Furniture"}}
-- "Show me Furniture" → {"tool": "get_products_by_category", "parameters": {"category": "Furniture"}}
-- "Show me Electronics" → {"tool": "get_products_by_category", "parameters": {"category": "Electronics"}}
-- "Show me Laptops" → {"tool": "get_products_by_segment", "parameters": {"segment": "Laptops"}}
-- "Find laptops" → {"tool": "get_products_by_segment", "parameters": {"segment": "Laptops"}}
-- "Show me mobiles" → {"tool": "get_products_by_segment", "parameters": {"segment": "mobiles"}}
-- "Get product named Laptop1" → {"tool": "get_product_by_name", "parameters": {"name": "Laptop1"}}
-- "Find iPhone" → {"tool": "get_product_by_name", "parameters": {"name": "iPhone"}}
-- "Show me all MacBooks" → {"tool": "list_products", "parameters": {}}
-- "Find MacBook products" → {"tool": "list_products", "parameters": {}}
-- "Show all products" → {"tool": "list_products", "parameters": {}}
-- "Update the price of iPhone 17 to 799" → {"tool": "list_products", "parameters": {}}
-- "Change Laptop1 price to 1200" → {"tool": "list_products", "parameters": {}}
-- "Set MacBook Pro price to 2999" → {"tool": "list_products", "parameters": {}}
-- "Update product iPhone 15 Pro with price 1100" → {"tool": "list_products", "parameters": {}}
-- "Update price of all MacBook Pro 16-inch to 2900" → {"tool": "list_products", "parameters": {}}
-- "Update all MacBook products to price 2800" → {"tool": "list_products", "parameters": {}}
-- "Set all Laptop1 prices to 1500" → {"tool": "list_products", "parameters": {}}
-- "Change all iPhone prices to 900" → {"tool": "list_products", "parameters": {}}
-- "Delete Acer Laptop" → {"tool": "list_products", "parameters": {}}
-- "Remove iPhone 15 Pro" → {"tool": "list_products", "parameters": {}}
-- "Erase MacBook Air" → {"tool": "list_products", "parameters": {}}
-- "Delete all MacBook products" → {"tool": "list_products", "parameters": {}}
-- "Remove all laptops in Electronics" → {"tool": "list_products", "parameters": {}}
-- "Delete all home office products" → {"tool": "list_products", "parameters": {}}
-- "Erase all iPhone models" → {"tool": "list_products", "parameters": {}}
+EXAMPLES:
+Query:
+• "Show Furniture" → get_products_by_category {"category":"Furniture"}
+• "Find Laptops" → get_products_by_segment {"segment":"Laptops"}
+• "Get iPhone" → get_product_by_name {"name":"iPhone"}
+• "Show all products" → list_products {}
 
-UPDATE COMMAND PROCESSING:
-The route handler will detect update intent from commands containing:
-- "update", "change", "set", "modify" + "price"
-- Extract product name patterns and new price values
-- Match products from list_products result
-- Call update_product or update_products with actual UUIDs
+Create:
+• "Create iPhone 16 at 899" → create_product {"name":"iPhone 16","price":899}
+• "Create Desk Lamp 45 in Office furniture, HomeOffice segment" → create_product {"name":"Desk Lamp","price":45,"category":"Office furniture","segment":"HomeOffice"}
+• "Add Office Desk 400, Office Chair 200 in Office furniture category and HomeOffice segment" → create_multiple_products {"products":[{"name":"Office Desk","price":400,"category":"Office furniture","segment":"HomeOffice"},{"name":"Office Chair","price":200,"category":"Office furniture","segment":"HomeOffice"}]}
 
-DELETE COMMAND PROCESSING:
-For delete commands, the route handler resolves product names to UUIDs:
-- "delete", "remove", "erase" + product name
-- Extract product name from command
-- Match products from list_products result
-- Call delete_product or delete_products with actual UUIDs
-- Examples:
-  - "Delete Acer Laptop" → {"tool": "list_products", "parameters": {}}
-  - "Remove iPhone 15 Pro" → {"tool": "list_products", "parameters": {}}
-  - "Delete all MacBook products" → {"tool": "list_products", "parameters": {}}
-  - "Remove all laptops in Electronics" → {"tool": "list_products", "parameters": {}}
-  - "Erase all home office products" → {"tool": "list_products", "parameters": {}}
+Update (→ list_products, handler resolves):
+• "Update iPhone 17 to 799" → list_products {}
+• "Set all MacBook to 2800" → list_products {}
 
-BULK OPERATIONS RULES:
-- BULK UPDATE: Commands with "all", "every", "entire" + update action
-  - "Update all MacBook prices to 2500" → use list_products (handler calls update_products)
-  - "Change every iPhone price to 999" → use list_products (handler calls update_products)
-  - "Set all home office product prices to 400" → use list_products (handler calls update_products)
-  
-- BULK DELETE: Commands with "all", "every", "entire" + delete action
-  - "Delete all MacBook products" → use list_products (handler calls delete_products)
-  - "Remove all duplicate products" → use list_products (handler identifies and deletes)
-  - "Erase all laptops in Electronics" → use list_products (handler filters and deletes)
+Delete (→ list_products, handler resolves):
+• "Delete Acer Laptop" → list_products {}
+• "Remove all iPhone" → list_products {}
 
-- SINGLE OPERATIONS: Specific product name without "all"
-  - "Update iPhone 15 price to 899" → use list_products (handler calls update_product)
-  - "Delete Acer Laptop" → use list_products (handler calls delete_product)
+Count:
+• "How many products" → list_products {}
+• "Count Electronics" → get_products_by_category {"category":"Electronics"}
 
-- "Show me duplicate products" → {"tool": "list_products", "parameters": {}}
-- "Identify duplicates" → {"tool": "list_products", "parameters": {}}
-- "Clean up duplicate products" → {"tool": "list_products", "parameters": {}}
-- "Remove duplicate products" → {"tool": "list_products", "parameters": {}}
-- "How many products are there" → {"tool": "list_products", "parameters": {}}
-- "Count all products" → {"tool": "list_products", "parameters": {}}
-- "How many products in Electronics category" → {"tool": "get_products_by_category", "parameters": {"category": "Electronics"}}
-- "Count products in Furniture" → {"tool": "get_products_by_category", "parameters": {"category": "Furniture"}}
-- "How many MacBook products" → {"tool": "list_products", "parameters": {}}
-- "Count Laptops" → {"tool": "get_products_by_segment", "parameters": {"segment": "Laptops"}}
-- "How many iPhone models do we have" → {"tool": "list_products", "parameters": {}}
+Duplicates:
+• "Show duplicates" → list_products {}
+• "Remove duplicates" → list_products {}
 
-DUPLICATE MANAGEMENT RULES:
-- If command contains "duplicate" or "duplicates" → use list_products (processed by route handler)
-- "find duplicates", "show duplicates", "identify duplicates" → analyze for duplicates
-- "clean duplicates", "remove duplicates", "cleanup duplicates" → delete duplicate products
-- "delete all duplicates" → use list_products (handler identifies and deletes)
-
-BULK UPDATE RULES:
-- If command contains "all", "every", "entire" + update keywords → bulk update
-- For single specific product → use update_product (via list_products for name resolution)
-- Update keywords: "update", "change", "set", "modify" + "price"
-
-BULK DELETE RULES:
-- If command contains "all", "every", "entire" + delete keywords → bulk delete
-- For single specific product → use delete_product (via list_products for name resolution)
-- Delete keywords: "delete", "remove", "erase", "cleanup"
-
-COUNTING RULES:
-- If command contains "how many", "count", "number of" → will be processed for counting
-- Use appropriate tool to get products, then count will be calculated by route handler
-
-SMART INTERPRETATION GUIDE:
-- Electronics, Furniture, Office furniture = likely CATEGORY
-- Laptops, mobiles, Smartphones, HomeOffice = likely SEGMENT  
-- Specific product names like iPhone, Laptop1, MacBook = likely NAME
-- For partial matches like "MacBook", "iPhone models" → use list_products to get all products and let frontend filter
-
-Convert this command to JSON (output ONLY the JSON):
+Output JSON only:
 ${command}`;
 
   try {
