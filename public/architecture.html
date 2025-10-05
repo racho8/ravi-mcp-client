@@ -113,20 +113,20 @@
         .diagram-container {
             position: relative;
             width: 100%;
-            height: 880px;
+            height: 910px;
         }
         
         .component {
             position: absolute;
             background: white;
             border: 3px solid #e2e8f0;
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 16px;
             text-align: center;
             transition: all 0.3s ease;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            width: 160px;
-            min-height: 120px;
+            width: 140px;
+            min-height: 100px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -142,42 +142,63 @@
         
         /* Component positioning - Clean top-to-bottom flow with increased spacing */
         .user { 
-            top: 50px; 
-            left: 120px; 
+            top: 110px; 
+            left: 50px; 
             background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); 
             border-color: #f59e0b; 
+            z-index: 5;
         }
         .frontend { 
-            top: 50px; 
-            left: 420px; 
+            top: 110px; 
+            left: 330px; 
             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); 
             border-color: #3b82f6; 
         }
         .bff { 
-            top: 220px; 
-            left: 270px; 
+            top: 110px; 
+            left: 530px; 
             background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); 
             border-color: #10b981; 
         }
         .llm { 
-            top: 220px; 
-            left: 30px; 
+            top: 270px; 
+            left: 330px; 
             background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); 
             border-color: #7c3aed; 
         }
         .mcp-client { 
-            top: 220px;
-            left: 520px; 
+            top: 270px;
+            left: 530px; 
             background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); 
             border-color: #059669; 
+        }
+        .localhost-container {
+            position: absolute;
+            top: 70px;
+            left: 300px;
+            width: 420px;
+            height: 340px;
+            background: linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 100%);
+            border: 3px solid #7c3aed;
+            border-radius: 24px;
+            z-index: 0;
+        }
+        .localhost-label {
+            position: absolute;
+            top: 85px;
+            left: 315px;
+            color: #7c3aed;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: left;
         }
         
         /* Google Cloud Container */
         .google-cloud-container {
             position: absolute;
-            top: 420px;
-            left: 400px;
-            width: 340px;
+            top: 480px;
+            left: 300px;
+            width: 420px;
             height: 380px;
             background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
             border: 3px solid #0288d1;
@@ -188,33 +209,50 @@
         .cloud-label {
             position: absolute;
             top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 15px;
             color: #01579b;
             padding: 0;
             font-size: 14px;
             font-weight: 700;
-            text-align: center;
+            text-align: left;
+            z-index: 3;
         }
         
         .mcp-server { 
-            top: 470px; 
-            left: 490px; 
+            top: 540px; 
+            left: 360px; 
             background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); 
             border-color: #ea580c;
             z-index: 2;
         }
+        .product-service {
+            position: absolute;
+            top: 540px;
+            left: 540px;
+            background: linear-gradient(135deg, #e0ffe0 0%, #b3ffc6 100%);
+            border: 3px solid #43a047;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            width: 140px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
         .database { 
-            top: 640px; 
-            left: 490px; 
+            top: 720px; 
+            left: 450px; 
             background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); 
             border-color: #ec4899;
             z-index: 2;
         }
         
         .component-icon {
-            font-size: 36px;
-            margin-bottom: 8px;
+            font-size: 32px;
+            margin-bottom: 6px;
             display: block;
         }
         
@@ -224,6 +262,7 @@
         .llm .component-icon { color: #7c3aed; }
         .mcp-client .component-icon { color: #047857; }
         .mcp-server .component-icon { color: #ea580c; }
+        .product-service .component-icon { color: #43a047; }
         .database .component-icon { color: #ec4899; }
         
         .component h3 {
@@ -436,40 +475,46 @@
             
             <div class="architecture-diagram">
                 <div class="diagram-container">
+                    <!-- Localhost Container -->
+                    <div class="localhost-container"></div>
+                    <div class="localhost-label"><i class="fas fa-laptop"></i> Localhost</div>
                     <!-- SVG for connection arrows -->
                     <svg class="connections-svg">
                         <defs>
-                            <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-                                    refX="9" refY="3.5" orient="auto">
-                                <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
+                            <marker id="arrowhead" markerWidth="6" markerHeight="4" 
+                                    refX="5" refY="2" orient="auto">
+                                <polygon points="0 0, 6 2, 0 4" fill="#4f46e5" />
                             </marker>
                         </defs>
+                        <!-- User to Frontend (arrow from User's right edge to Frontend's left edge) -->
+                        <path d="M 190 160 L 330 160" class="arrow request" />
                         
-                        <!-- User to Frontend - clean horizontal line -->
-                        <path d="M 280 110 L 420 110" class="arrow request" />
+                        <!-- Frontend to BFF (clean horizontal arrow) -->
+                        <path d="M 470 160 L 530 160" class="arrow request" />
                         
-                        <!-- Frontend to BFF - curved path avoiding overlap -->
-                        <path d="M 500 170 Q 380 190 350 220" class="arrow request" />
+                        <!-- BFF to LLM (curved arrow going down and left, avoiding Frontend box) -->
+                        <path d="M 530 200 Q 480 240 400 270" class="arrow request" />
                         
-                        <!-- BFF to LLM - horizontal left -->
-                        <path d="M 270 280 L 190 280" class="arrow request" />
+                        <!-- BFF to MCP Client (curved arrow going down and right, avoiding boxes) -->
+                        <path d="M 670 200 Q 720 240 600 270" class="arrow request" />
                         
-                        <!-- BFF to MCP Client - horizontal right with gap -->
-                        <path d="M 430 280 L 520 280" class="arrow request" />
+                        <!-- MCP Client to MCP Server (curved arrow exiting localhost bottom and entering google cloud top) -->
+                        <path d="M 600 370 Q 515 455 430 540" class="arrow data" />
                         
-                        <!-- MCP Client to MCP Server - vertical with offset to avoid Google Cloud border -->
-                        <path d="M 600 340 Q 620 380 580 470" class="arrow data" />
+                        <!-- MCP Server to Product-Service (horizontal arrow) -->
+                        <path d="M 500 590 Q 555 590 570 590" class="arrow data" />
                         
-                        <!-- MCP Server to Database - clean vertical inside Google Cloud -->
-                        <path d="M 570 590 L 570 640" class="arrow data" />
+                        <!-- Product-Service to Product DB (vertical down arrow with more space) -->
+                        <path d="M 610 640 L 610 680 Q 565 700 520 720" class="arrow data" />
                         
-                        <!-- Response flows (dashed) - mirror paths with offsets -->
-                        <path d="M 570 640 L 570 590" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 580 470 Q 620 380 600 340" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 520 280 L 430 280" class="arrow response" stroke-dasharray="5,5" stroke-dashoffset="10" />
-                        <path d="M 190 280 L 270 280" class="arrow response" stroke-dasharray="5,5" stroke-dashoffset="10" />
-                        <path d="M 350 220 Q 380 190 500 170" class="arrow response" stroke-dasharray="5,5" />
-                        <path d="M 420 110 L 280 110" class="arrow response" stroke-dasharray="5,5" stroke-dashoffset="10" />
+                        <!-- Response flows (dashed) - mirroring request flows -->
+                        <path d="M 520 720 Q 565 700 610 680 L 610 640" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 570 590 Q 555 590 500 590" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 430 540 Q 515 455 600 370" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 600 270 Q 720 240 670 200" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 400 270 Q 480 240 530 200" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 530 160 L 470 160" class="arrow response" stroke-dasharray="5,5" />
+                        <path d="M 330 160 L 190 160" class="arrow response" stroke-dasharray="5,5" />
                     </svg>
                     
                     <!-- Flow legend -->
@@ -491,7 +536,7 @@
                     <!-- Google Cloud Container -->
                     <div class="google-cloud-container">
                         <div class="cloud-label">
-                            <i class="fab fa-google-play"></i> Google Cloud
+                            <i class="fas fa-cloud"></i> Google Cloud
                         </div>
                     </div>
                     
@@ -501,37 +546,36 @@
                         <h3>User</h3>
                         <p>Natural language input</p>
                     </div>
-                    
                     <div class="component frontend">
                         <i class="fas fa-desktop component-icon"></i>
                         <h3>Frontend UI</h3>
                         <p>Modern chatbot interface</p>
                     </div>
-                    
                     <div class="component bff">
                         <i class="fas fa-server component-icon"></i>
                         <h3>Express BFF</h3>
                         <p>Backend orchestration</p>
                     </div>
-                    
                     <div class="component llm">
                         <i class="fas fa-brain component-icon"></i>
                         <h3>Ollama LLM</h3>
                         <p>AI intent processing</p>
                     </div>
-                    
                     <div class="component mcp-client">
                         <i class="fas fa-plug component-icon"></i>
                         <h3>MCP Client</h3>
                         <p>Protocol handler</p>
                     </div>
-                    
                     <div class="component mcp-server">
                         <i class="fas fa-cloud component-icon"></i>
                         <h3>MCP Server</h3>
                         <p>Google Cloud service</p>
                     </div>
-                    
+                    <div class="component product-service">
+                        <i class="fas fa-cogs component-icon"></i>
+                        <h3>Product-Service</h3>
+                        <p>Business logic</p>
+                    </div>
                     <div class="component database">
                         <i class="fas fa-database component-icon"></i>
                         <h3>Product DB</h3>
