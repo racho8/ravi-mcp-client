@@ -12,10 +12,12 @@ export async function callLLM(command: string): Promise<any> {
 
 RULES:
 • Query: "show/find/get [X]" → match by name > segment > category
+• If command mentions a specific category/segment name, use the specific filter tool
 • Create: Extract name, price, category (optional), segment (optional)
-• Update/Delete: Always use list_products (handler extracts names & resolves UUIDs)
+• Update: Always use list_products (handler extracts names & resolves UUIDs)
+• Delete: Use delete_product with product name as "id" parameter (handler resolves name to UUID)
 • Count: use list_products or specific filter tools
-• "all/every" = bulk operation (handler decides update_products vs delete_products)
+• "all/every" in delete = delete_products; in update = bulk operation
 
 MATCHING:
 • Electronics/Furniture/Office furniture = category | Laptops/mobiles/HomeOffice = segment | iPhone/MacBook = name
@@ -40,9 +42,12 @@ Available tools:`;
 EXAMPLES:
 Query:
 • "Show Furniture" → get_products_by_category {"category":"Furniture"}
+• "Show all products in Electronics category" → get_products_by_category {"category":"Electronics"}
+• "Show me all products in Furniture category" → get_products_by_category {"category":"Furniture"}
 • "Find Laptops" → get_products_by_segment {"segment":"Laptops"}
 • "Get iPhone" → get_product_by_name {"name":"iPhone"}
 • "Show all products" → list_products {}
+• "List everything" → list_products {}
 
 Create:
 • "Create iPhone 16 at 899" → create_product {"name":"iPhone 16","price":899}
@@ -53,9 +58,10 @@ Update (→ list_products, handler resolves):
 • "Update iPhone 17 to 799" → list_products {}
 • "Set all MacBook to 2800" → list_products {}
 
-Delete (→ list_products, handler resolves):
-• "Delete Acer Laptop" → list_products {}
-• "Remove all iPhone" → list_products {}
+Delete:
+• "Delete HP Spectre" → delete_product {"id":"HP Spectre"}
+• "Remove iPhone 16" → delete_product {"id":"iPhone 16"}
+• "Delete all MacBook" → delete_products {"ids":["MacBook"]}
 
 Count:
 • "How many products" → list_products {}
