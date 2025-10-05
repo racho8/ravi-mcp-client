@@ -1,3 +1,34 @@
+/**
+ * mcpSchemaCache.ts - Schema Management & Caching
+ * 
+ * Purpose:
+ * - Fetches and caches MCP tool schemas for 10 minutes to reduce redundant calls
+ * - Provides tool descriptions and parameter schemas to llmClient.ts
+ * - Manages GCP auth token caching (55-minute expiry)
+ * 
+ * Key Features:
+ * - Tool schema caching with 10-minute TTL (Time To Live)
+ * - GCP Identity Token caching (55-minute duration)
+ * - Optimized axios instance with connection pooling
+ * - Stale cache fallback when fetch fails
+ * - Schema validation utilities
+ * 
+ * Cached Information:
+ * - Tool names, descriptions, input schemas, and sample payloads
+ * - JSON-RPC envelope formats for different MCP methods
+ * 
+ * Cache Strategy:
+ * - First call: Fetches schemas from MCP server via tools/list
+ * - Subsequent calls: Returns cached schemas if within 10-minute window
+ * - On fetch failure: Returns stale cache if available
+ * - Token caching: Prevents repeated gcloud CLI calls
+ * 
+ * Performance Benefits:
+ * - Reduces MCP server load by minimizing schema fetches
+ * - Speeds up LLM prompt generation (no wait for schema fetch)
+ * - Connection reuse via keep-alive agent (max 5 sockets, 15s timeout)
+ */
+
 // src/bff/mcpSchemaCache.ts
 // Utility to fetch, cache, and use MCP tool schemas and JSON-RPC envelope formats
 import axios from 'axios';

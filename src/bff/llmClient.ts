@@ -1,3 +1,30 @@
+/**
+ * llmClient.ts - LLM Integration Layer
+ * 
+ * Purpose:
+ * - Interfaces with Ollama (llama3 model) at http://localhost:11434
+ * - Converts natural language commands to structured JSON tool calls
+ * - Dynamically builds tool definitions from MCP schemas
+ * 
+ * Key Features:
+ * - Enhanced prompt engineering with explicit JSON format requirements
+ * - Includes query/create/update/delete examples for better LLM guidance
+ * - Robust JSON parsing with fallback extraction from markdown blocks
+ * - Handles LLM response errors gracefully with user-friendly messages
+ * - Dynamic tool schema loading from mcpSchemaCache
+ * 
+ * LLM Prompt Strategy:
+ * - Provides clear rules for query matching (name > segment > category)
+ * - Includes specific examples for filtering, CRUD operations, and counting
+ * - Forces JSON format with 'format: json' parameter
+ * - Explicit "Return ONLY valid JSON" instruction to prevent text responses
+ * 
+ * Error Handling:
+ * - Extracts JSON from markdown code blocks (```json ... ```)
+ * - Falls back to regex pattern matching for JSON objects
+ * - Provides clear error messages when JSON parsing fails
+ */
+
 // LLM client for Ollama (local) or Google LLM (cloud)
 import axios from 'axios';
 import { fetchAndCacheToolSchemas } from './mcpSchemaCache.js';
@@ -39,49 +66,84 @@ Available tools:`;
   // Add specific examples for filtering
   toolDefinitions += `
 
-EXAMPLES:
+EXAMPLES (return format: {"tool":"tool_name","parameters":{...}}):
 Query:
-• "Show Furniture" → get_products_by_category {"category":"Furniture"}
-• "Show all products in Electronics category" → get_products_by_category {"category":"Electronics"}
-• "Show me all products in Furniture category" → get_products_by_category {"category":"Furniture"}
-• "Find Laptops" → get_products_by_segment {"segment":"Laptops"}
-• "Get iPhone" → get_product_by_name {"name":"iPhone"}
-• "Show all products" → list_products {}
-• "List everything" → list_products {}
+• "Show Furniture" → {"tool":"get_products_by_category","parameters":{"category":"Furniture"}}
+• "Show all products in Electronics category" → {"tool":"get_products_by_category","parameters":{"category":"Electronics"}}
+• "How many products are in Electronics category" → {"tool":"get_products_by_category","parameters":{"category":"Electronics"}}
+• "Show me all products in Furniture category" → {"tool":"get_products_by_category","parameters":{"category":"Furniture"}}
+• "Find Laptops" → {"tool":"get_products_by_segment","parameters":{"segment":"Laptops"}}
+• "Get iPhone" → {"tool":"get_product_by_name","parameters":{"name":"iPhone"}}
+• "Show all products" → {"tool":"list_products","parameters":{}}
+• "List everything" → {"tool":"list_products","parameters":{}}
 
 Create:
-• "Create iPhone 16 at 899" → create_product {"name":"iPhone 16","price":899}
-• "Create Desk Lamp 45 in Office furniture, HomeOffice segment" → create_product {"name":"Desk Lamp","price":45,"category":"Office furniture","segment":"HomeOffice"}
-• "Add Office Desk 400, Office Chair 200 in Office furniture category and HomeOffice segment" → create_multiple_products {"products":[{"name":"Office Desk","price":400,"category":"Office furniture","segment":"HomeOffice"},{"name":"Office Chair","price":200,"category":"Office furniture","segment":"HomeOffice"}]}
+• "Create iPhone 16 at 899" → {"tool":"create_product","parameters":{"name":"iPhone 16","price":899}}
+• "Create Desk Lamp 45 in Office furniture, HomeOffice segment" → {"tool":"create_product","parameters":{"name":"Desk Lamp","price":45,"category":"Office furniture","segment":"HomeOffice"}}
 
 Update (→ list_products, handler resolves):
-• "Update iPhone 17 to 799" → list_products {}
-• "Set all MacBook to 2800" → list_products {}
+• "Update iPhone 17 to 799" → {"tool":"list_products","parameters":{}}
+• "Set all MacBook to 2800" → {"tool":"list_products","parameters":{}}
 
 Delete:
-• "Delete HP Spectre" → delete_product {"id":"HP Spectre"}
-• "Remove iPhone 16" → delete_product {"id":"iPhone 16"}
-• "Delete all MacBook" → delete_products {"ids":["MacBook"]}
+• "Delete HP Spectre" → {"tool":"delete_product","parameters":{"id":"HP Spectre"}}
+• "Remove iPhone 16" → {"tool":"delete_product","parameters":{"id":"iPhone 16"}}
+• "Delete Laptop2" → {"tool":"delete_product","parameters":{"id":"Laptop2"}}
+• "Delete product named Dell Laptop" → {"tool":"delete_product","parameters":{"id":"Dell Laptop"}}
 
 Count:
-• "How many products" → list_products {}
-• "Count Electronics" → get_products_by_category {"category":"Electronics"}
+• "How many products" → {"tool":"list_products","parameters":{}}
+• "Count Electronics" → {"tool":"get_products_by_category","parameters":{"category":"Electronics"}}
+• "How many in Laptops segment" → {"tool":"get_products_by_segment","parameters":{"segment":"Laptops"}}
 
 Duplicates:
-• "Show duplicates" → list_products {}
-• "Remove duplicates" → list_products {}
+• "Show duplicates" → {"tool":"list_products","parameters":{}}
+• "Remove duplicates" → {"tool":"list_products","parameters":{}}
 
-Output JSON only:
-${command}`;
+CRITICAL: Return ONLY valid JSON in this exact format: {"tool":"tool_name","parameters":{...}}
+Do NOT include explanations, markdown, or any text before/after the JSON.
+
+User command: ${command}
+JSON response:`;
 
   try {
     const response = await axios.post('http://localhost:11434/api/generate', {
       model: 'llama3',
       prompt: toolDefinitions,
-      stream: false
+      stream: false,
+      format: 'json'  // Request JSON format from Ollama
     });
-    return JSON.parse(response.data.response);
-  } catch (err) {
-    throw new Error('LLM call failed: ' + (err as any).message);
+    
+    let rawResponse = response.data.response.trim();
+    console.log('[LLM] Raw response:', rawResponse);
+    
+    // Try to extract JSON if it's wrapped in markdown or text
+    if (rawResponse.includes('```json')) {
+      const jsonMatch = rawResponse.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        rawResponse = jsonMatch[1];
+      }
+    } else if (rawResponse.includes('```')) {
+      const jsonMatch = rawResponse.match(/```\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        rawResponse = jsonMatch[1];
+      }
+    }
+    
+    // If response doesn't start with {, try to find the JSON object
+    if (!rawResponse.startsWith('{')) {
+      const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        rawResponse = jsonMatch[0];
+      }
+    }
+    
+    return JSON.parse(rawResponse);
+  } catch (err: any) {
+    console.error('[LLM] Error details:', err.message);
+    if (err.message.includes('Unexpected token')) {
+      throw new Error('LLM returned invalid JSON. Please try rephrasing your command.');
+    }
+    throw new Error('LLM call failed: ' + err.message);
   }
 }

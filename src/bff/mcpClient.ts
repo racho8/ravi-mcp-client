@@ -1,66 +1,41 @@
-// Debug utility: Print all products from MCP
-export async function debugPrintAllProducts(): Promise<void> {
-  const config = getAuthConfig();
-  const rpcPayload = {
-    jsonrpc: "2.0",
-    id: Date.now(),
-    method: "tools/call",
-    params: { name: "list_products", arguments: {} }
-  };
-  try {
-    const response = await axiosInstance.post(MCP_SERVER_URL, rpcPayload, config);
-    const products = response.data?.result || [];
-    console.log("[debugPrintAllProducts] Product list:");
-    for (const p of products) {
-      console.log(`ID: ${p.id}, Name: '${p.name}', Category: '${p.category}', Segment: '${p.segment}'`);
-    }
-  } catch (err) {
-    console.error("Failed to fetch product list from MCP:", err);
-  }
-}
+/**
+ * mcpClient.ts - MCP Protocol Client
+ * 
+ * Purpose:
+ * - Communicates with the remote MCP server hosted on Google Cloud Run
+ * - Handles GCP authentication with token caching (55-minute expiry)
+ * - Maps 13 tools to JSON-RPC 2.0 payloads for MCP protocol compliance
+ * 
+ * Supported Tools (13):
+ * Product CRUD:
+ * - list_products, get_product, create_product, update_product, delete_product
+ * 
+ * Bulk Operations:
+ * - create_multiple_products, update_products, delete_products
+ * 
+ * Filtering:
+ * - get_products_by_category, get_products_by_segment, get_product_by_name
+ * 
+ * System:
+ * - list_tools, welcome_message, health_check
+ * 
+ * Key Features:
+ * - GCP Identity Token authentication with caching
+ * - HTTP keep-alive for connection reuse and performance optimization
+ * - Tool name alias support (e.g., get_product_by_name accepts plural variant)
+ * - UUID validation warnings for update/delete operations
+ * 
+ * Authentication:
+ * - Local development: Uses gcloud CLI to fetch identity tokens
+ * - Production: Supports MCP_AUTH_TOKEN environment variable
+ * - Token caching prevents repeated gcloud calls (55-minute cache duration)
+ * 
+ * Performance Optimizations:
+ * - Axios instance with keep-alive agent (max 10 sockets, 30s timeout)
+ * - Connection pooling for multiple concurrent requests
+ * - Token caching to avoid repeated authentication calls
+ */
 
-// Debug utility: Test category query directly
-export async function debugTestCategoryQuery(category: string): Promise<any> {
-  const config = getAuthConfig();
-  const rpcPayload = {
-    jsonrpc: "2.0",
-    id: Date.now(),
-    method: "tools/call",
-    params: { 
-      name: "get_products_by_category", 
-      arguments: { category } 
-    }
-  };
-  try {
-    console.log(`[debugTestCategoryQuery] Testing category: "${category}"`);
-    const response = await axiosInstance.post(MCP_SERVER_URL, rpcPayload, config);
-    const result = response.data;
-    const products = result?.result || [];
-    console.log(`[debugTestCategoryQuery] Response for category "${category}":`, JSON.stringify(result, null, 2));
-    console.log(`[debugTestCategoryQuery] Found ${Array.isArray(products) ? products.length : 0} products`);
-    return result;
-  } catch (err) {
-    console.error(`[debugTestCategoryQuery] Failed to fetch products for category "${category}":`, err);
-    throw err;
-  }
-}
-// Utility to fetch product by name
-async function fetchProductIdByName(productName: string, config: any): Promise<string | undefined> {
-  const rpcPayload = {
-    jsonrpc: "2.0",
-    id: Date.now(),
-    method: "tools/call",
-    params: {
-      name: "list_products"
-    }
-  };
-  const response = await axios.post(MCP_SERVER_URL, rpcPayload, config);
-  if (response.data && response.data.result && Array.isArray(response.data.result.products)) {
-    const match = response.data.result.products.find((p: any) => p.name === productName);
-    return match ? match.id : undefined;
-  }
-  return undefined;
-}
 // src/bff/mcpClient.ts
 // Client to communicate with remote MCP server
 import axios from 'axios';
@@ -263,6 +238,7 @@ export async function callMCP(toolInvocation: any): Promise<any> {
         };
         break;
       case 'get_product_by_name':
+      case 'get_products_by_name':  // Handle plural alias
         rpcPayload = {
           jsonrpc: "2.0",
           id: rpcId,

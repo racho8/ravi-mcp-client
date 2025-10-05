@@ -1,3 +1,34 @@
+/**
+ * routes.ts - Request Handler & Business Logic Orchestration
+ * 
+ * Purpose:
+ * - Main orchestration layer that processes natural language commands
+ * - Implements pattern matching for fast queries (bypasses LLM for simple commands)
+ * - Handles 8 processing stages: pattern match → LLM → MCP call → counting → 
+ *   duplicates → updates → deletes → caching
+ * 
+ * Key Features:
+ * - Smart caching (30s duration) with auto-invalidation on mutations
+ * - Duplicate product detection and cleanup recommendations
+ * - Name-to-UUID resolution for update/delete operations
+ * - Category/segment filtering and grouping
+ * - Response transformations for counts, filters, and bulk operations
+ * - Fast path optimization for simple queries
+ * 
+ * Processing Flow:
+ * 1. Check cache for common queries
+ * 2. Pattern matching for fast recognition (list products, list tools, category queries)
+ * 3. LLM fallback for complex natural language queries
+ * 4. MCP tool invocation
+ * 5. Special handling for counting, duplicates, updates, deletes, grouping
+ * 6. Cache management and response return
+ * 
+ * Cache Strategy:
+ * - Caches simple product listing queries for 30 seconds
+ * - Automatically invalidates cache on any mutation (create/update/delete)
+ * - Invalidates related queries (e.g., all product queries when one product changes)
+ */
+
 import { Request, Response } from 'express';
 import { callLLM } from './llmClient.js';
 import { callMCP } from './mcpClient.js';
@@ -130,9 +161,14 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
     if (normalizedCommand.match(/^(show|list|get)\s+(all\s+)?products?\s*$/)) {
       console.log(`[Pattern Match] Recognized simple product list query - skipping LLM`);
       llmResult = { tool: 'list_products', parameters: {} };
+    } else if (normalizedCommand.match(/^(show|list|get)\s+(all\s+)?tools?\s*$/)) {
+      console.log(`[Pattern Match] Recognized list tools query - skipping LLM`);
+      llmResult = { tool: 'list_tools', parameters: {} };
     } else if (normalizedCommand.match(/^(show|list|get)\s+.*products?\s+in\s+(\w+)\s+category$/)) {
       const categoryMatch = normalizedCommand.match(/in\s+(\w+)\s+category$/);
-      const category = categoryMatch ? categoryMatch[1] : '';
+      let category = categoryMatch ? categoryMatch[1] : '';
+      // Capitalize first letter to match database format (Electronics, Furniture, etc.)
+      category = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
       console.log(`[Pattern Match] Recognized category query for: ${category}`);
       llmResult = { tool: 'get_products_by_category', parameters: { category } };
     } else {
