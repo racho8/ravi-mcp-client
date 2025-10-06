@@ -28,11 +28,14 @@ export async function handleSingleUpdate(
   
   console.log(`[Update Flow] Found product: ${matchingProduct.name} (${matchingProduct.id}), updating price from ${matchingProduct.price} to ${newPrice}`);
   
-  // Call update_product with actual UUID
+  // Call update_product with actual UUID and preserve existing fields
   const updateResult = await callMCP({
     tool: 'update_product',
     parameters: {
       id: matchingProduct.id,
+      name: matchingProduct.name,
+      category: matchingProduct.category,
+      segment: matchingProduct.segment,
       price: newPrice
     }
   });

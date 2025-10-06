@@ -33,43 +33,32 @@ import { Request, Response } from 'express';
 import { callLLM } from './llmClient.js';
 import { callMCP } from './mcpClient.js';
 
-// Helper function to identify duplicate products
+// Helper: Identify duplicate products
 function identifyDuplicates(products: any[]): Record<string, any[]> {
-  const duplicates: Record<string, any[]> = {};
   const nameGroups: Record<string, any[]> = {};
   
-  // Group products by name (case-insensitive)
   for (const product of products) {
     if (product.name) {
       const normalizedName = product.name.toLowerCase().trim();
-      if (!nameGroups[normalizedName]) {
-        nameGroups[normalizedName] = [];
-      }
+      if (!nameGroups[normalizedName]) nameGroups[normalizedName] = [];
       nameGroups[normalizedName].push(product);
     }
   }
   
-  // Find groups with more than one product (duplicates)
-  for (const [name, group] of Object.entries(nameGroups)) {
-    if (group.length > 1) {
-      duplicates[name] = group;
-    }
-  }
-  
-  return duplicates;
+  return Object.fromEntries(
+    Object.entries(nameGroups).filter(([_, group]) => group.length > 1)
+  );
 }
 
-// Helper function to recommend which duplicates to keep
+// Helper: Recommend which duplicates to keep
 function recommendDuplicateCleanup(duplicates: Record<string, any[]>): any {
   const recommendations = [];
   let totalToDelete = 0;
   
   for (const [name, group] of Object.entries(duplicates)) {
-    // Sort by price descending, then by creation date if available
-    const sorted = group.sort((a, b) => {
-      if (a.price !== b.price) return b.price - a.price; // Higher price first
-      return a.id.localeCompare(b.id); // Stable sort by ID
-    });
+    const sorted = group.sort((a, b) => 
+      a.price !== b.price ? b.price - a.price : a.id.localeCompare(b.id)
+    );
     
     const toKeep = sorted[0];
     const toDelete = sorted.slice(1);
@@ -77,10 +66,7 @@ function recommendDuplicateCleanup(duplicates: Record<string, any[]>): any {
     recommendations.push({
       productName: name,
       duplicateCount: group.length,
-      recommended: {
-        keep: toKeep,
-        delete: toDelete
-      }
+      recommended: { keep: toKeep, delete: toDelete }
     });
     
     totalToDelete += toDelete.length;
@@ -96,45 +82,26 @@ function recommendDuplicateCleanup(duplicates: Record<string, any[]>): any {
   };
 }
 
-// Simple response cache for common queries
+// Simple response cache
 const responseCache = new Map<string, { response: any; timestamp: number }>();
-const CACHE_DURATION = 30 * 1000; // 30 seconds cache
+const CACHE_DURATION = 30 * 1000;
 
-// Cache invalidation helper
+// Cache invalidation
 function invalidateProductCache(reason: string) {
-  let invalidatedCount = 0;
-  const keysToDelete: string[] = [];
+  const keysToDelete = Array.from(responseCache.keys()).filter(key =>
+    key.includes('product') || key.includes('show all') || 
+    key.includes('list all') || key.includes('get all')
+  );
   
-  for (const [key] of responseCache) {
-    // Match any query that involves products
-    if (key.includes('product') || 
-        key.includes('show all') || 
-        key.includes('list all') ||
-        key.includes('get all') ||
-        key.match(/^(show|list|get)\s+(all\s+)?products?\s*$/)) {
-      keysToDelete.push(key);
-    }
-  }
-  
-  keysToDelete.forEach(key => {
-    responseCache.delete(key);
-    invalidatedCount++;
-  });
-  
-  console.log(`[Cache Invalidation] ${reason} - Cleared ${invalidatedCount} cached queries: [${keysToDelete.join(', ')}]`);
+  keysToDelete.forEach(key => responseCache.delete(key));
+  console.log(`[Cache] ${reason} - Cleared ${keysToDelete.length} entries`);
 }
 
-// Helper to check if a tool is a mutation operation
+// Check if tool is a mutation
 function isMutationOperation(toolName: string): boolean {
-  const mutationTools = [
-    'create_product', 
-    'update_product', 
-    'delete_product',
-    'create_multiple_products',
-    'update_products', 
-    'delete_products'
-  ];
-  return mutationTools.includes(toolName);
+  return ['create_product', 'update_product', 'delete_product',
+          'create_multiple_products', 'update_products', 'delete_products'
+         ].includes(toolName);
 }
 
 // Handles POST /api/command
@@ -182,21 +149,7 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
     let mcpResult = await callMCP(llmResult);
     console.log(`[Route] Initial MCP Result:`, JSON.stringify(mcpResult, null, 2));
     
-    // 2.1. Debug logging for category/segment queries
-    if (llmResult.tool === 'get_products_by_category' || llmResult.tool === 'get_products_by_segment') {
-      const resultArray = mcpResult.result;
-      const count = Array.isArray(resultArray) ? resultArray.length : 0;
-      console.log(`[Debug] ${llmResult.tool} returned ${count} products`);
-      console.log(`[Debug] Full result type:`, typeof resultArray, `isArray:`, Array.isArray(resultArray));
-      if (count > 0) {
-        console.log(`[Debug] First 3 products:`, resultArray.slice(0, 3).map((p: any) => ({ name: p.name, category: p.category })));
-        if (count > 3) {
-          console.log(`[Debug] ... and ${count - 3} more products`);
-        }
-      }
-    }
-    
-    // 3. Fast path for simple "show all products" - skip complex processing
+    // 3. Fast path for simple "show all products"
     const isSimpleListQuery = command.toLowerCase().match(/^(show|list|get)\s+(all\s+)?products?\s*$/);
     
     if (isSimpleListQuery && llmResult.tool === 'list_products' && mcpResult.result && Array.isArray(mcpResult.result)) {
@@ -204,12 +157,10 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       return res.json({ result: mcpResult });
     }
     
-    // 3.1. Check if this is a counting query and modify response accordingly
+    // 3.1. Handle counting queries
     const isCountingQuery = command.toLowerCase().includes('how many') || 
                            command.toLowerCase().includes('count') || 
                            command.toLowerCase().includes('number of');
-                           
-    // Early return for counting queries to avoid unnecessary processing
     if (isCountingQuery && mcpResult.result && Array.isArray(mcpResult.result)) {
       console.log(`[Counting Query] Converting result to count`);
       
@@ -256,9 +207,7 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       return res.json({ result: countResult });
     }
     
-    // 3.5. Apply name-based filtering for regular "find" commands (moved after update processing)
-    
-    // 4. Handle special duplicate management commands
+    // 4. Handle duplicate management commands
     if (command.toLowerCase().includes('duplicate') || command.toLowerCase().includes('find duplicates')) {
       console.log(`[Duplicate Management] Processing duplicate command`);
       
@@ -331,6 +280,10 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
           };
         }
       }
+      
+      // Early return to skip further processing
+      const finalResponse = { result: mcpResult };
+      return res.json(finalResponse);
     }
     
     // 5. Handle update commands: resolve product names to UUIDs
@@ -685,58 +638,33 @@ export async function processNaturalLanguageCommand(req: Request, res: Response)
       }
     }
     
-    // 6.5. Apply name-based filtering for regular "find" commands (only if no update was processed)
-    if (!isCountingQuery && 
-        llmResult.tool === 'list_products' && 
-        mcpResult.result && 
-        Array.isArray(mcpResult.result) &&
-        !command.toLowerCase().includes('update') &&
-        !command.toLowerCase().includes('change') &&
-        !command.toLowerCase().includes('set') &&
-        !command.toLowerCase().includes('modify')) {
+    // 6.5. Apply name-based filtering for "find" commands
+    if (!isCountingQuery && llmResult.tool === 'list_products' && 
+        mcpResult.result && Array.isArray(mcpResult.result) &&
+        !command.toLowerCase().match(/update|change|set|modify/)) {
       
       const lowerCommand = command.toLowerCase();
       let products = mcpResult.result;
-      let filtered = false;
+      const patterns = [
+        { match: ['macbook', 'mac book'], filter: 'macbook', name: 'MacBook' },
+        { match: ['iphone'], filter: 'iphone', name: 'iPhone' },
+        { match: ['laptop'], filter: 'laptop', name: 'Laptop' }
+      ];
       
-      if (lowerCommand.includes('macbook') || lowerCommand.includes('mac book')) {
-        products = products.filter((p: any) => 
-          p.name && p.name.toLowerCase().includes('macbook')
-        );
-        filtered = true;
-        console.log(`[Name Filter] Filtered to ${products.length} MacBook products`);
-      } else if (lowerCommand.includes('iphone')) {
-        products = products.filter((p: any) => 
-          p.name && p.name.toLowerCase().includes('iphone')
-        );
-        filtered = true;
-        console.log(`[Name Filter] Filtered to ${products.length} iPhone products`);
-      } else if (lowerCommand.includes('laptop')) {
-        products = products.filter((p: any) => 
-          p.name && p.name.toLowerCase().includes('laptop')
-        );
-        filtered = true;
-        console.log(`[Name Filter] Filtered to ${products.length} Laptop products`);
-      }
-      
-      // Update the result if filtering was applied
-      if (filtered) {
-        mcpResult = {
-          jsonrpc: "2.0",
-          id: mcpResult.id,
-          result: products
-        };
+      for (const pattern of patterns) {
+        if (pattern.match.some(m => lowerCommand.includes(m))) {
+          products = products.filter((p: any) => 
+            p.name && p.name.toLowerCase().includes(pattern.filter)
+          );
+          console.log(`[Name Filter] Filtered to ${products.length} ${pattern.name} products`);
+          mcpResult = { jsonrpc: "2.0", id: mcpResult.id, result: products };
+          break;
+        }
       }
     }
     
-    // 7. Handle cache invalidation and caching for responses
+    // 7. Cache management and final response
     const finalResponse = { result: mcpResult };
-    
-    // Debug: Log final response for category/segment queries
-    if (llmResult.tool === 'get_products_by_category' || llmResult.tool === 'get_products_by_segment') {
-      const productCount = Array.isArray(mcpResult.result) ? mcpResult.result.length : 'not an array';
-      console.log(`[Debug] Sending final response with ${productCount} products to client`);
-    }
     
     // Invalidate cache if this was a mutation operation that succeeded
     if (isMutationOperation(llmResult.tool) && mcpResult.result && !mcpResult.error) {

@@ -41,7 +41,7 @@ RULES:
 • Query: "show/find/get [X]" → match by name > segment > category
 • If command mentions a specific category/segment name, use the specific filter tool
 • Create: Extract name, price, category (optional), segment (optional)
-• Update: Always use list_products (handler extracts names & resolves UUIDs)
+• Update: Single product → use update_product with product name as "id" and new price; Multiple products → use update_products
 • Delete: Use delete_product with product name as "id" parameter (handler resolves name to UUID)
 • Count: use list_products or specific filter tools
 • "all/every" in delete = delete_products; in update = bulk operation
@@ -81,9 +81,10 @@ Create:
 • "Create iPhone 16 at 899" → {"tool":"create_product","parameters":{"name":"iPhone 16","price":899}}
 • "Create Desk Lamp 45 in Office furniture, HomeOffice segment" → {"tool":"create_product","parameters":{"name":"Desk Lamp","price":45,"category":"Office furniture","segment":"HomeOffice"}}
 
-Update (→ list_products, handler resolves):
-• "Update iPhone 17 to 799" → {"tool":"list_products","parameters":{}}
-• "Set all MacBook to 2800" → {"tool":"list_products","parameters":{}}
+Update:
+• "Update iPhone 17 to 799" → {"tool":"update_product","parameters":{"id":"iPhone 17","price":799}}
+• "Update the price of Gaming mouse to 90" → {"tool":"update_product","parameters":{"id":"Gaming mouse","price":90}}
+• "Set all MacBook to 2800" → {"tool":"update_products","parameters":{"products":[{"name":"MacBook","price":2800}]}}
 
 Delete:
 • "Delete HP Spectre" → {"tool":"delete_product","parameters":{"id":"HP Spectre"}}
