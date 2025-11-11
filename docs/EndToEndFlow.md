@@ -318,63 +318,84 @@ Body: {
 ### 9. Product-Service → Product DB
 
 **What happens:**
-- Product-Service executes database query
+- Product-Service executes Firestore query
 
-**Data Flow - SQL Query:**
-```sql
-SELECT 
-  id, 
-  name, 
-  description, 
-  price, 
-  category, 
-  stock_quantity,
-  created_at,
-  updated_at
-FROM products
-WHERE deleted_at IS NULL
-ORDER BY created_at DESC
-LIMIT 100 OFFSET 0;
+**Data Flow - Firestore Query:**
+```javascript
+// Firestore query operation
+const productsRef = db.collection('products');
+
+// Query for all active products
+const snapshot = await productsRef
+  .where('deleted_at', '==', null)
+  .orderBy('created_at', 'desc')
+  .limit(100)
+  .get();
+
+// Extract documents
+const products = [];
+snapshot.forEach(doc => {
+  products.push({
+    id: doc.id,
+    ...doc.data()
+  });
+});
 ```
 
-**Authentication (Database):**
+**Authentication (Firestore):**
 ```javascript
-// Database connection with credentials
-const dbConnection = {
-  host: "product-db.internal",
-  port: 5432,
-  database: "products",
-  user: "product_service",
-  password: "<DB_PASSWORD>", // From environment variable or secret manager
-  ssl: {
-    required: true,
-    ca: "<CA_CERTIFICATE>"
-  }
-}
+// Firestore connection with GCP credentials
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize with Application Default Credentials (ADC)
+const app = initializeApp({
+  credential: applicationDefault(),
+  projectId: 'your-gcp-project-id'
+});
+
+const db = getFirestore(app);
+
+// Authentication handled automatically via:
+// - GCP Service Account
+// - Application Default Credentials (ADC)
+// - No password needed - uses IAM permissions
 ```
 
 **Product DB Returns:**
 ```json
 [
   {
-    "id": 1,
+    "id": "a1b2c3d4e5f6",
     "name": "Laptop Pro 15",
     "description": "High-performance laptop",
     "price": 1299.99,
     "category": "Electronics",
     "stock_quantity": 25,
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-20T14:22:00Z"
+    "created_at": {
+      "_seconds": 1705318200,
+      "_nanoseconds": 0
+    },
+    "updated_at": {
+      "_seconds": 1705749720,
+      "_nanoseconds": 0
+    }
   },
   {
-    "id": 2,
+    "id": "f6e5d4c3b2a1",
     "name": "Wireless Mouse",
     "description": "Ergonomic wireless mouse",
     "price": 29.99,
     "category": "Accessories",
     "stock_quantity": 150,
-    "created_at": "2024-01-16T09:15:00Z",
-    "updated_at": "2024-01-16T09:15:00Z"
+    "created_at": {
+      "_seconds": 1705395300,
+      "_nanoseconds": 0
+    },
+    "updated_at": {
+      "_seconds": 1705395300,
+      "_nanoseconds": 0
+    }
   }
   // ... more products
 ]
@@ -390,8 +411,8 @@ const dbConnection = {
 ```javascript
 // Raw database results
 products: [
-  { id: 1, name: "Laptop Pro 15", ... },
-  { id: 2, name: "Wireless Mouse", ... },
+  { id: "a1b2c3d4e5f6", name: "Laptop Pro 15", ... },
+  { id: "f6e5d4c3b2a1", name: "Wireless Mouse", ... },
   // ... more products
 ]
 ```
@@ -412,7 +433,7 @@ products: [
   "data": {
     "products": [
       {
-        "id": 1,
+        "id": "a1b2c3d4e5f6",
         "name": "Laptop Pro 15",
         "description": "High-performance laptop",
         "price": 1299.99,
@@ -420,7 +441,7 @@ products: [
         "stock_quantity": 25
       },
       {
-        "id": 2,
+        "id": "f6e5d4c3b2a1",
         "name": "Wireless Mouse",
         "description": "Ergonomic wireless mouse",
         "price": 29.99,
@@ -489,8 +510,8 @@ products: [
   success: true,
   data: {
     products: [
-      { id: 1, name: "Laptop Pro 15", ... },
-      { id: 2, name: "Wireless Mouse", ... }
+      { id: "a1b2c3d4e5f6", name: "Laptop Pro 15", ... },
+      { id: "f6e5d4c3b2a1", name: "Wireless Mouse", ... }
     ],
     total_count: 42
   }
@@ -531,8 +552,8 @@ products: [
       name: "list_products",
       content: JSON.stringify({
         products: [
-          { id: 1, name: "Laptop Pro 15", price: 1299.99, ... },
-          { id: 2, name: "Wireless Mouse", price: 29.99, ... }
+          { id: "a1b2c3d4e5f6", name: "Laptop Pro 15", price: 1299.99, ... },
+          { id: "f6e5d4c3b2a1", name: "Wireless Mouse", price: 29.99, ... }
         ],
         total_count: 42
       })
@@ -670,13 +691,18 @@ User: Sees formatted product list
   - Internal API Key
 - **Security:** Private network, encrypted communication
 
-### 5. **Product-Service ↔ Database**
-- **Type:** Database Credentials
+### 5. **Product-Service ↔ Firestore Database**
+- **Type:** GCP Service Account / Application Default Credentials (ADC)
 - **Mechanism:**
-  - Username/password from Secret Manager
-  - SSL/TLS encrypted connection
-  - Certificate-based authentication
-- **Security:** Encrypted in transit, credentials rotated regularly
+  - Service account with Firestore permissions
+  - ADC automatically handles authentication
+  - IAM-based access control (roles: `datastore.user`, `datastore.owner`)
+  - No password required - uses GCP IAM
+- **Security:** 
+  - Encrypted in transit (TLS/HTTPS)
+  - IAM permissions control read/write access
+  - Automatic key rotation by GCP
+  - Firebase security rules for additional layer
 
 ---
 
@@ -708,10 +734,12 @@ User: Sees formatted product list
 - Database error → Return 503 Service Unavailable
 - Invalid query → Return 400 Bad Request
 
-### Database
-- Connection error → Retry with connection pool
-- Query timeout → Return timeout error
-- Deadlock → Retry transaction
+### Firestore Database
+- Connection error → Automatic retry with exponential backoff
+- Permission denied → Return 403 Forbidden
+- Document not found → Return 404 Not Found
+- Quota exceeded → Return 429 Too Many Requests
+- Offline mode → Queue operations for sync when online
 
 ---
 
@@ -724,7 +752,7 @@ Breakdown:
 - BFF → LLM (first call): ~500ms (AI inference)
 - MCP Client → MCP Server: ~100ms (network + auth)
 - MCP Server → Product-Service: ~50ms (internal network)
-- Product-Service → Database: ~200ms (query execution)
+- Product-Service → Firestore: ~150ms (query execution - faster than traditional SQL)
 - Product-Service → MCP Server: ~20ms
 - MCP Server → MCP Client: ~100ms
 - BFF → LLM (second call): ~800ms (formatting response)
@@ -733,10 +761,11 @@ Breakdown:
 **Optimization Opportunities:**
 1. Cache common queries (product list)
 2. Parallel processing where possible
-3. Connection pooling for database
+3. Firestore indexes for faster queries
 4. Token caching (reuse GCP tokens for 1 hour)
 5. Streaming responses for large datasets
 6. CDN for static assets
+7. Firestore offline persistence for better reliability
 
 ---
 
