@@ -781,10 +781,10 @@ Breakdown:
 ### Google Cloud
 - **MCP Server:** Cloud Run (containerized service)
 - **Product-Service:** Node.js microservice
-- **Database:** Cloud SQL (PostgreSQL) or Firestore
-- **Authentication:** GCP Identity Token (OAuth 2.0)
+- **Database:** Firestore (NoSQL document database)
+- **Authentication:** GCP Identity Token (OAuth 2.0), Application Default Credentials (ADC)
 - **Networking:** VPC, Cloud Load Balancing
-- **Security:** Cloud IAM, Secret Manager
+- **Security:** Cloud IAM, Firestore Security Rules
 
 ---
 
